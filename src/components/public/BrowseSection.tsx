@@ -82,7 +82,9 @@ export function BrowseSection({
               ) : (
                 items.map((item, index) => (
                   <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/80'}>
-                    <td className="px-5 py-4 font-semibold text-[#1e3a8a]">{formatItemCode(item.id)}</td>
+                    <td className="px-5 py-4 font-semibold text-[#1e3a8a]">
+                      {item.itemCode ?? formatItemCode(item.id)}
+                    </td>
                     <td className="px-5 py-4">{item.category}</td>
                     <td className="px-5 py-4">
                       <p className="max-w-xs truncate">{item.description || item.itemName}</p>

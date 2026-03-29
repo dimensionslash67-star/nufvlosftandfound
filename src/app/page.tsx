@@ -5,6 +5,8 @@ import { HeroSection } from '@/components/public/HeroSection';
 import { HowToClaim } from '@/components/public/HowToClaim';
 import { getItemsPage } from '@/lib/items';
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page({
   searchParams,
 }: {
