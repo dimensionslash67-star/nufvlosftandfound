@@ -1,29 +1,43 @@
-# NUFV Lost and Found v2
+NU Fairview Lost & Found Management System
 
-## Stack
-- Next.js 15 (App Router) + TypeScript
-- PostgreSQL (Neon) + Prisma ORM
-- Vercel Blob Storage
-- JWT authentication
-- Tailwind CSS
+A modern web-based Lost and Found management system built for National University Fairview (NUFV) 
+— replacing the legacy PHP system with a fast, secure, and mobile-friendly Next.js application.
 
-## Setup
-1. `npm install`
-2. Copy `.env.local.example` to `.env.local` and fill in values
-3. `npm run db:push` — push schema to Neon
-4. `npm run db:seed` — create admin user + sample data
-5. `npm run dev`
+The NUFV Lost and Found System is an internal web application that helps students and staff of National University Fairview report, browse, and claim lost items found within the campus.
+The system has two sides:
 
-## Deploy to Vercel
-1. Push to GitHub
-2. Import repo in Vercel
-3. Add all env vars from `.env.local`, including `CRON_SECRET`
-4. Vercel auto-deploys on push
+Public side — Students can browse found items and submit claims without logging in
+Staff/Admin side — Authorized staff can add items, manage records, track claims, and generate reports
 
-## Admin Login (after seed)
-- Email: admin@nufv.edu
-- Password: admin123
+This project is a full migration from a PHP + MySQL system to a modern Next.js 15 + PostgreSQL stack, deployed on Vercel with cloud image storage via Vercel Blob.
 
-## Cron Jobs (auto-configured via vercel.json)
-- `/api/cron/disposal` — runs daily at midnight, disposes items >30 days old
-- `/api/cron/overdue` — runs daily at 1am, flags overdue items
+Features
+Public (No Login Required)
+
+Browse all found items with search and filters
+Filter by item type, date range, and location
+View item details and submit a claim request
+Mobile-friendly responsive design
+
+Staff Portal
+
+Secure login with JWT authentication
+Add new found items with photo uploads
+Update item status (Available → Claimed → Returned → Disposed)
+View and manage claimed items
+
+Admin Dashboard
+
+Full item management (create, edit, delete)
+User account management (create staff, assign roles)
+Audit logs — track every action taken in the system
+Statistics dashboard with item counts by category
+Generate and download CSV reports
+Bulk import items via CSV file
+System settings management
+
+Automated Background Tasks
+
+Daily disposal cron — automatically marks unclaimed items older than 30 days as Disposed
+Overdue tracking cron — flags items that have passed their due date
+
