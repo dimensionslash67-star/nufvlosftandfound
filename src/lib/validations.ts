@@ -26,6 +26,8 @@ export const itemSchema = z.object({
     errorMap: () => ({ message: 'Please select a valid category' }),
   }),
   location: z.string().min(2, 'Location must be at least 2 characters'),
+  dateReported: z.string().optional(),
+  dueDate: z.string().optional().or(z.literal('')),
   contactInfo: z.string().max(255, 'Contact info is too long').optional().or(z.literal('')),
   imageUrl: z.string().url('Image URL must be valid').optional().or(z.literal('')),
 });
@@ -44,10 +46,13 @@ export const itemStatusSchema = z.object({
 
 export const itemQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().positive().max(5000).optional(),
   status: z.enum(ITEM_STATUSES).optional(),
   category: z.enum(ITEM_CATEGORIES).optional(),
   search: z.string().trim().optional(),
   location: z.string().trim().optional(),
+  date: z.enum(['today', '7days', '30days', '90days']).optional(),
+  disposal: z.enum(['true', 'false']).optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
 });
@@ -86,7 +91,7 @@ export const adminSettingsSchema = z.object({
 });
 
 export const adminReportQuerySchema = z.object({
-  type: z.enum(['items', 'users', 'audit']).default('items'),
+  type: z.enum(['items', 'claims', 'users', 'audit']).default('items'),
   page: z.coerce.number().int().positive().default(1),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),

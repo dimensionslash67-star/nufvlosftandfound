@@ -21,6 +21,10 @@ export function formatDisplayDate(value?: string | Date | null, pattern = 'MMM d
 }
 
 export function formatItemCode(id: string) {
+  if (id.startsWith('ITEM-')) {
+    return id;
+  }
+
   return `LF-${id.slice(-6).toUpperCase()}`;
 }
 

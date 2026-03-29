@@ -16,8 +16,8 @@ export default async function Page({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold text-slate-900">Claimed Items</h1>
-        <p className="text-sm text-slate-500">Filtered view of items that have already been claimed.</p>
+        <h1 className="text-3xl font-semibold text-slate-900 dark:text-[#f1f5f9]">Claimed Items</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Filtered view of items that have already been claimed.</p>
       </div>
 
       <ItemsFilterBar
@@ -29,13 +29,13 @@ export default async function Page({
         search={filters.search}
       />
 
-      <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
-        <p className="text-lg font-semibold text-slate-900">
+      <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)] dark:border-[#334155] dark:bg-[#1e293b]">
+        <p className="text-lg font-semibold text-slate-900 dark:text-[#f1f5f9]">
           Showing {rangeStart}-{rangeEnd} of {pagination.totalItems} claimed items
         </p>
       </div>
 
-      <ItemsTable items={items} />
+      <ItemsTable copyItemCode items={items} />
 
       <PaginationControls
         page={pagination.page}

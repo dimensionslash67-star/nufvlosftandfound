@@ -10,6 +10,7 @@ export interface ItemUserSummary {
 
 export interface Item {
   id: string;
+  itemCode?: string | null;
   itemName: string;
   description?: string | null;
   category: string;

@@ -7,8 +7,16 @@
     color-scheme: light;
   }
 
+  .dark {
+    color-scheme: dark;
+  }
+
   body {
     @apply min-h-screen bg-gray-100 text-gray-900 antialiased;
+  }
+
+  .dark body {
+    @apply bg-[#0f172a] text-[#f1f5f9];
   }
 
   a {
@@ -31,8 +39,16 @@
     @apply border-b border-gray-200 hover:bg-gray-50;
   }
 
+  .dark tbody tr {
+    @apply border-[#334155] hover:bg-[#1e293b];
+  }
+
   tbody td {
     @apply px-4 py-3 text-sm;
+  }
+
+  .dark tbody td {
+    @apply text-slate-200;
   }
 
   ::selection {

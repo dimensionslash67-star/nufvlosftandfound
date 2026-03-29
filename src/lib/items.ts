@@ -40,6 +40,7 @@ export function buildItemWhere(
   if (filters.search) {
     where.OR = [
       { id: { contains: filters.search, mode: 'insensitive' } },
+      { itemCode: { contains: filters.search, mode: 'insensitive' } },
       { itemName: { contains: filters.search, mode: 'insensitive' } },
       { description: { contains: filters.search, mode: 'insensitive' } },
       { location: { contains: filters.search, mode: 'insensitive' } },

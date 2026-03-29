@@ -63,7 +63,7 @@ export function Sidebar({
       {mobileOpen ? (
         <button
           aria-label="Close sidebar"
-          className="fixed inset-0 z-40 bg-slate-950/55 md:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/55 md:hidden dark:bg-black/70"
           onClick={onClose}
           type="button"
         />
@@ -71,7 +71,7 @@ export function Sidebar({
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex h-screen w-16 flex-col bg-[#0f1b35] text-white transition-transform duration-200 md:w-[240px] md:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 flex h-screen w-16 flex-col bg-[#0f1b35] text-white transition-transform duration-200 md:w-[240px] md:translate-x-0 dark:bg-[#0a1628]',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >

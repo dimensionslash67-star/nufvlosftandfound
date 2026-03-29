@@ -14,6 +14,7 @@ export const ITEM_CATEGORIES = [
   'Accessories',
   'Books',
   'Bags',
+  'Tumbler',
   'Keys',
   'Documents',
   'Sports Equipment',

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getAdminStatisticsData } from '@/lib/admin';
-import { formatDisplayDate, formatItemCode } from '@/lib/utils';
+import { formatDisplayDate } from '@/lib/utils';
 
 function ActionIcon({
   children,
@@ -170,7 +170,7 @@ export default async function Page() {
                 >
                   <td className="px-4 py-[14px]">
                     <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 font-mono text-[12px] font-semibold text-indigo-500">
-                      {formatItemCode(item.id)}
+                      {item.itemCode ?? item.id.slice(0, 8)}
                     </span>
                   </td>
                   <td className="px-4 py-[14px] font-medium text-slate-800">{item.itemName}</td>

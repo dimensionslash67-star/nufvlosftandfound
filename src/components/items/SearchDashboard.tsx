@@ -223,7 +223,7 @@ export function SearchDashboard() {
           </p>
         </div>
       ) : (
-        <ItemsTable items={result.items} />
+        <ItemsTable copyItemCode items={result.items} />
       )}
 
       <PaginationControls

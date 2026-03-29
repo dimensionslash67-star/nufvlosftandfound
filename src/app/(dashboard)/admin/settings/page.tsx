@@ -1,8 +1,12 @@
-import { SettingsForm } from '@/components/admin/SettingsForm';
-import { getSettingsData } from '@/lib/admin';
+import { ProfileSettings } from '@/components/admin/ProfileSettings';
+import { getAdminSessionFromCookies } from '@/lib/admin';
 
 export default async function Page() {
-  const settings = await getSettingsData();
+  const user = await getAdminSessionFromCookies();
 
-  return <SettingsForm initialSettings={settings} />;
+  if (!user) {
+    return null;
+  }
+
+  return <ProfileSettings initialUser={user} />;
 }

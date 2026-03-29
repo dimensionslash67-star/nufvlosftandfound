@@ -6,7 +6,7 @@ import { ItemStatusBadge } from '@/components/items/ItemStatusBadge';
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
 import { getItemById } from '@/lib/items';
-import { formatDisplayDate, formatItemCode, getUserDisplayName } from '@/lib/utils';
+import { formatDisplayDate, getUserDisplayName } from '@/lib/utils';
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -23,9 +23,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-10 md:px-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-brand-navy/70">
-              {formatItemCode(item.id)}
-            </p>
+            <p className="font-mono text-sm text-slate-500">{item.itemCode ?? '—'}</p>
             <h1 className="mt-2 text-3xl font-semibold text-slate-900">{item.itemName}</h1>
           </div>
           <div className="flex items-center gap-3">

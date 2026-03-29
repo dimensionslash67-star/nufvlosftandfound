@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuditLog } from '@/lib/audit';
 import { getAuthPayloadFromRequest } from '@/lib/auth';
@@ -7,6 +8,15 @@ import { itemUpdateSchema } from '@/lib/validations';
 function normalizeOptionalString(value?: string) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+function parseOptionalDate(value?: string) {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
 async function getExistingItem(id: string) {
@@ -79,36 +89,54 @@ export async function PATCH(
 
     const json = await request.json();
     const parsed = itemUpdateSchema.safeParse(json);
+    const normalizedStatus =
+      typeof json.status === 'string' ? json.status.toUpperCase() : undefined;
+    const shouldDispose = normalizedStatus === 'DISPOSED';
 
     if (!parsed.success) {
-      return NextResponse.json(
-        {
-          message: 'Validation failed.',
-          errors: parsed.error.flatten().fieldErrors,
-        },
-        { status: 400 },
-      );
+      if (normalizedStatus !== 'DISPOSED') {
+        return NextResponse.json(
+          {
+            message: 'Validation failed.',
+            errors: parsed.error.flatten().fieldErrors,
+          },
+          { status: 400 },
+        );
+      }
     }
+
+    const updateData: Prisma.ItemUpdateInput = {
+      itemName: parsed.success ? parsed.data.itemName?.trim() : undefined,
+      description:
+        parsed.success && parsed.data.description !== undefined
+          ? normalizeOptionalString(parsed.data.description)
+          : undefined,
+      category: parsed.success ? parsed.data.category : undefined,
+      location: parsed.success ? parsed.data.location?.trim() : undefined,
+      dateReported:
+        parsed.success && parsed.data.dateReported !== undefined
+          ? parseOptionalDate(parsed.data.dateReported)
+          : undefined,
+      dueDate:
+        parsed.success && parsed.data.dueDate !== undefined
+          ? parseOptionalDate(parsed.data.dueDate)
+          : undefined,
+      contactInfo:
+        parsed.success && parsed.data.contactInfo !== undefined
+          ? normalizeOptionalString(parsed.data.contactInfo)
+          : undefined,
+      imageUrl:
+        parsed.success && parsed.data.imageUrl !== undefined
+          ? normalizeOptionalString(parsed.data.imageUrl)
+          : undefined,
+      status: shouldDispose ? 'DISPOSED' : undefined,
+      isDisposed: shouldDispose ? true : undefined,
+      disposalDate: shouldDispose ? new Date() : undefined,
+    };
 
     const item = await prisma.item.update({
       where: { id },
-      data: {
-        itemName: parsed.data.itemName?.trim(),
-        description:
-          parsed.data.description !== undefined
-            ? normalizeOptionalString(parsed.data.description)
-            : undefined,
-        category: parsed.data.category,
-        location: parsed.data.location?.trim(),
-        contactInfo:
-          parsed.data.contactInfo !== undefined
-            ? normalizeOptionalString(parsed.data.contactInfo)
-            : undefined,
-        imageUrl:
-          parsed.data.imageUrl !== undefined
-            ? normalizeOptionalString(parsed.data.imageUrl)
-            : undefined,
-      },
+      data: updateData,
       include: {
         reporter: {
           select: {
@@ -124,10 +152,10 @@ export async function PATCH(
 
     await createAuditLog({
       userId: payload.userId,
-      action: 'ITEM_UPDATED',
+      action: shouldDispose ? 'ITEM_DISPOSED' : 'ITEM_UPDATED',
       entityType: 'ITEM',
       entityId: item.id,
-      details: parsed.data,
+      details: shouldDispose ? { status: 'DISPOSED' } : parsed.data,
       request,
     });
 

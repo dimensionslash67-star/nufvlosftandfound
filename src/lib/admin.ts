@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { Prisma } from '@prisma/client';
+import { eachDayOfInterval, format, startOfDay, subDays } from 'date-fns';
 import type { NextRequest } from 'next/server';
 import { getAuthCookieName, getAuthPayloadFromRequest, verifyJWT } from './auth';
 import { ITEMS_PER_PAGE, ITEM_STATUS_LABELS } from './constants';
@@ -253,13 +254,85 @@ export async function saveSettingsData(values: {
   ]);
 }
 
+export type ReportType = 'items' | 'claims' | 'users' | 'audit';
+
+export async function getReportStatsData({
+  days = 30,
+}: {
+  days?: number;
+} = {}) {
+  const startDate = startOfDay(subDays(new Date(), Math.max(days - 1, 0)));
+
+  const [totalItems, available, claimed, disposed, byCategoryGroups, recentItems] = await Promise.all([
+    prisma.item.count(),
+    prisma.item.count({ where: { status: 'PENDING' } }),
+    prisma.item.count({ where: { status: 'CLAIMED' } }),
+    prisma.item.count({ where: { status: 'DISPOSED' } }),
+    prisma.item.groupBy({
+      by: ['category'],
+      _count: {
+        category: true,
+      },
+      orderBy: {
+        category: 'asc',
+      },
+    }),
+    prisma.item.findMany({
+      where: {
+        createdAt: {
+          gte: startDate,
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+      select: {
+        createdAt: true,
+      },
+    }),
+  ]);
+
+  const countsByDate = new Map<string, number>();
+  for (const item of recentItems) {
+    const key = format(item.createdAt, 'yyyy-MM-dd');
+    countsByDate.set(key, (countsByDate.get(key) ?? 0) + 1);
+  }
+
+  const byDate = eachDayOfInterval({
+    start: startDate,
+    end: startOfDay(new Date()),
+  }).map((date) => {
+    const key = format(date, 'yyyy-MM-dd');
+    return {
+      date: key,
+      count: countsByDate.get(key) ?? 0,
+    };
+  });
+
+  const byCategory = byCategoryGroups
+    .map((group) => ({
+      category: group.category,
+      count: group._count.category,
+    }))
+    .sort((left, right) => right.count - left.count);
+
+  return {
+    totalItems,
+    available,
+    claimed,
+    disposed,
+    byDate,
+    byCategory,
+  };
+}
+
 export async function getReportPreviewData({
   type,
   dateFrom,
   dateTo,
   page = 1,
 }: {
-  type: 'items' | 'users' | 'audit';
+  type: ReportType;
   dateFrom?: string;
   dateTo?: string;
   page?: number;
@@ -297,6 +370,56 @@ export async function getReportPreviewData({
         'Created At': formatDisplayDate(row.createdAt, 'MMM d, yyyy'),
       })),
       columns: ['ID', 'Username', 'Email', 'Role', 'Active', 'Created At'],
+      pagination: {
+        page,
+        pageSize: ITEMS_PER_PAGE,
+        totalItems,
+        totalPages: Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE)),
+      },
+    };
+  }
+
+  if (type === 'claims') {
+    const where: Prisma.ItemWhereInput = {
+      status: 'CLAIMED',
+      ...(buildDateRangeWhere('dateReported', dateFrom, dateTo) as Prisma.ItemWhereInput),
+    };
+    const [rows, totalItems] = await Promise.all([
+      prisma.item.findMany({
+        where,
+        skip: (page - 1) * ITEMS_PER_PAGE,
+        take: ITEMS_PER_PAGE,
+        orderBy: { claimedAt: 'desc' },
+        select: {
+          id: true,
+          itemCode: true,
+          itemName: true,
+          category: true,
+          location: true,
+          claimedAt: true,
+          claimer: {
+            select: {
+              username: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      }),
+      prisma.item.count({ where }),
+    ]);
+
+    return {
+      type,
+      rows: rows.map((row) => ({
+        'Item Code': row.itemCode ?? row.id,
+        'Item Name': row.itemName,
+        Category: row.category,
+        Location: row.location,
+        Claimer: getUserDisplayName(row.claimer ?? undefined),
+        'Claimed At': row.claimedAt ? formatDisplayDate(row.claimedAt, 'MMM d, yyyy h:mm a') : '—',
+      })),
+      columns: ['Item Code', 'Item Name', 'Category', 'Location', 'Claimer', 'Claimed At'],
       pagination: {
         page,
         pageSize: ITEMS_PER_PAGE,
@@ -360,6 +483,7 @@ export async function getReportPreviewData({
       orderBy: { dateReported: 'desc' },
       select: {
         id: true,
+        itemCode: true,
         itemName: true,
         category: true,
         location: true,
@@ -373,14 +497,14 @@ export async function getReportPreviewData({
   return {
     type,
     rows: rows.map((row) => ({
-      'Item ID': row.id,
+      'Item Code': row.itemCode ?? row.id,
       'Item Name': row.itemName,
       Category: row.category,
       Location: row.location,
       Status: ITEM_STATUS_LABELS[row.status],
       'Date Reported': formatDisplayDate(row.dateReported, 'MMM d, yyyy'),
     })),
-    columns: ['Item ID', 'Item Name', 'Category', 'Location', 'Status', 'Date Reported'],
+    columns: ['Item Code', 'Item Name', 'Category', 'Location', 'Status', 'Date Reported'],
     pagination: {
       page,
       pageSize: ITEMS_PER_PAGE,

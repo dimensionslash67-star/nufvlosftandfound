@@ -33,6 +33,7 @@ enum UserRole {
 
 model Item {
   id              String      @id @default(cuid())
+  itemCode        String?     @unique @map("item_code")
   itemName        String      @map("item_name")
   description     String?
   category        String
@@ -99,4 +100,3 @@ model Setting {
 
   @@map("settings")
 }
-

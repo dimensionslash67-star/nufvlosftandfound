@@ -35,8 +35,8 @@ export function PaginationControls({
             key={pageNumber}
             className={`inline-flex h-10 w-10 items-center justify-center rounded-full border text-sm font-semibold transition ${
               pageNumber === page
-                ? 'border-brand-navy bg-brand-navy text-white'
-                : 'border-slate-300 bg-white text-slate-700 hover:border-brand-navy hover:text-brand-navy'
+                ? 'border-brand-navy bg-brand-navy text-white dark:border-indigo-400 dark:bg-indigo-500'
+                : 'border-slate-300 bg-white text-slate-700 hover:border-brand-navy hover:text-brand-navy dark:border-[#334155] dark:bg-[#1e293b] dark:text-slate-200 dark:hover:border-indigo-300 dark:hover:text-indigo-200'
             }`}
             href={`${pathname}?${searchParams.toString()}`}
           >
@@ -47,4 +47,3 @@ export function PaginationControls({
     </div>
   );
 }
-
