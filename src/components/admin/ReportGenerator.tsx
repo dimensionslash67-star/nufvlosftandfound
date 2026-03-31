@@ -263,8 +263,8 @@ export function ReportGenerator({
 
         <Table>
           <table className="min-w-full divide-y divide-slate-200 dark:divide-[#334155]">
-            <thead className="bg-white dark:bg-[#1e293b]">
-              <tr className="bg-white text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:bg-[#1e293b] dark:text-slate-400">
+            <thead className="bg-brand-navy text-white dark:bg-[#0a1628]">
+              <tr className="bg-brand-navy text-left text-xs font-semibold uppercase tracking-[0.2em] text-white dark:bg-[#0a1628]">
                 {columns.map((column) => (
                   <th key={column} className="px-5 py-4">
                     {column}
@@ -281,7 +281,10 @@ export function ReportGenerator({
                 </tr>
               ) : (
                 rows.map((row, index) => (
-                  <tr key={index}>
+                  <tr
+                    key={index}
+                    className="bg-white transition-colors hover:bg-slate-50 dark:bg-[#1e293b] dark:hover:bg-[#0f172a]"
+                  >
                     {columns.map((column, valueIndex) => {
                       const value = row[column];
 

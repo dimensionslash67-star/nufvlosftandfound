@@ -59,6 +59,7 @@ export async function POST(request: Request) {
       userId: user.id,
       email: user.email,
       role: user.role,
+      username: user.username,
     });
 
     await createAuditLog({
@@ -86,4 +87,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'Login failed.' }, { status: 500 });
   }
 }
-

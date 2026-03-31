@@ -1,19 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 import { getAuthCookieName, getExpiredAuthCookieOptions, verifyJWT } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const token = request.cookies.get(getAuthCookieName())?.value;
+    const cookieStore = await cookies();
+    const token = cookieStore.get(getAuthCookieName())?.value;
 
     if (!token) {
-      return NextResponse.json({ message: 'Unauthorized.' }, { status: 401 });
+      return NextResponse.json({ user: null }, { status: 401 });
     }
 
     const payload = await verifyJWT(token);
 
     if (!payload?.userId) {
-      const response = NextResponse.json({ message: 'Unauthorized.' }, { status: 401 });
+      const response = NextResponse.json({ user: null }, { status: 401 });
       response.cookies.set(getAuthCookieName(), '', getExpiredAuthCookieOptions());
       return response;
     }
@@ -34,16 +36,14 @@ export async function GET(request: NextRequest) {
     });
 
     if (!user || !user.isActive) {
-      const response = NextResponse.json({ message: 'Unauthorized.' }, { status: 401 });
+      const response = NextResponse.json({ user: null }, { status: 401 });
       response.cookies.set(getAuthCookieName(), '', getExpiredAuthCookieOptions());
       return response;
     }
 
     return NextResponse.json({ user });
   } catch (error) {
-    console.error('Session error:', error);
-
-    return NextResponse.json({ message: 'Unable to fetch session.' }, { status: 500 });
+    console.error('Session check error:', error);
+    return NextResponse.json({ user: null }, { status: 500 });
   }
 }
-

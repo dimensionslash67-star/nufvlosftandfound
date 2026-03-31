@@ -5,6 +5,10 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import type { Item } from '@/types/item';
+import { ClaimItemModal } from '@/components/items/ClaimItemModal';
+import { DisposeItemModal } from '@/components/items/DisposeItemModal';
+import { ItemDetailModal } from '@/components/items/ItemDetailModal';
+import { ItemStatusBadge } from '@/components/items/ItemStatusBadge';
 
 type FilterState = {
   search: string;
@@ -211,6 +215,11 @@ export function ManageItemsDashboard() {
   const [disposalCount, setDisposalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [claimModalOpen, setClaimModalOpen] = useState(false);
+  const [disposeModalOpen, setDisposeModalOpen] = useState(false);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     setFilters(getInitialState(searchParams));
@@ -262,7 +271,7 @@ export function ManageItemsDashboard() {
     return () => {
       active = false;
     };
-  }, [debouncedFilters, pathname, router, searchParamsString]);
+  }, [debouncedFilters, pathname, refreshTick, router, searchParamsString]);
 
   const rangeStart = useMemo(() => {
     if (result.pagination.totalItems === 0) {
@@ -358,6 +367,7 @@ export function ManageItemsDashboard() {
 
       window.alert(data.message ?? 'CSV imported successfully.');
       setFilters((current) => ({ ...current, page: '1' }));
+      setRefreshTick((current) => current + 1);
     } catch (error) {
       console.error('Import items error:', error);
       window.alert(error instanceof Error ? error.message : 'Unable to import CSV.');
@@ -365,40 +375,6 @@ export function ManageItemsDashboard() {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-      setBusyAction(null);
-    }
-  };
-
-  const disposeItem = async (item: Item) => {
-    const confirmed = window.confirm(
-      `Mark ${item.itemCode ?? item.itemName} as disposed?`,
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    setBusyAction(`dispose-${item.id}`);
-
-    try {
-      const response = await fetch(`/api/items/${item.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: 'DISPOSED' }),
-      });
-      const data = await response.json().catch(() => ({ message: 'Unable to dispose item.' }));
-
-      if (!response.ok) {
-        throw new Error(data.message ?? 'Unable to dispose item.');
-      }
-
-      setFilters((current) => ({ ...current }));
-    } catch (error) {
-      console.error('Dispose item error:', error);
-      window.alert(error instanceof Error ? error.message : 'Unable to dispose item.');
-    } finally {
       setBusyAction(null);
     }
   };
@@ -424,7 +400,7 @@ export function ManageItemsDashboard() {
         throw new Error(data.message ?? 'Unable to delete item.');
       }
 
-      setFilters((current) => ({ ...current }));
+      setRefreshTick((current) => current + 1);
     } catch (error) {
       console.error('Delete item error:', error);
       window.alert(error instanceof Error ? error.message : 'Unable to delete item.');
@@ -434,6 +410,21 @@ export function ManageItemsDashboard() {
   };
 
   const activeDisposalTab = filters.disposal === 'true';
+
+  const openClaimModal = (item: Item) => {
+    setSelectedItem(item);
+    setClaimModalOpen(true);
+  };
+
+  const openDisposeModal = (item: Item) => {
+    setSelectedItem(item);
+    setDisposeModalOpen(true);
+  };
+
+  const openDetailModal = (item: Item) => {
+    setSelectedItem(item);
+    setDetailModalOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -618,88 +609,87 @@ export function ManageItemsDashboard() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead className="bg-slate-50 dark:bg-[#0f172a]">
-                <tr className="border-b border-slate-200 dark:border-[#334155]">
-                  <th className="w-[140px] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+            <table className="min-w-full divide-y divide-slate-200 dark:divide-[#334155]">
+              <thead className="bg-brand-navy text-white dark:bg-[#0a1628]">
+                <tr className="bg-brand-navy text-left text-xs font-semibold uppercase tracking-[0.08em] text-white dark:bg-[#0a1628]">
+                  <th className="w-[140px] px-4 py-3">
                     Item Code
                   </th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                  <th className="px-4 py-3">
                     Description
                   </th>
-                  <th className="w-[130px] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                  <th className="w-[130px] px-4 py-3">
                     Category
                   </th>
-                  <th className="w-[160px] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                  <th className="w-[160px] px-4 py-3">
                     Location
                   </th>
-                  <th className="w-[120px] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                  <th className="w-[120px] px-4 py-3">
                     Date Received
                   </th>
-                  <th className="w-[100px] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                  <th className="w-[100px] px-4 py-3">
                     Status
                   </th>
-                  <th className="w-[220px] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                  <th className="w-[220px] px-4 py-3">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-200 dark:divide-[#334155]">
                 {result.items.map((item) => (
                   <tr
                     key={item.id}
-                    className="border-b border-slate-100 text-[13px] text-slate-700 transition hover:bg-slate-50 dark:border-[#334155] dark:text-slate-200 dark:hover:bg-[#0f172a]"
+                    className="bg-white text-[13px] text-slate-700 transition hover:bg-slate-50 dark:bg-[#1e293b] dark:text-slate-300 dark:hover:bg-[#0f172a]"
                   >
                     <td className="px-4 py-3.5">
                       <button
-                        className="rounded-md bg-slate-100 px-2 py-1 font-mono text-xs font-bold text-blue-800 transition hover:bg-slate-200 dark:bg-[#0f172a] dark:text-blue-300 dark:hover:bg-[#172036]"
-                        onClick={() => navigator.clipboard.writeText(item.itemCode ?? item.id)}
+                        className="rounded border border-blue-200 bg-blue-100 px-2 py-1 font-mono text-xs font-semibold text-blue-800 transition hover:bg-blue-200 dark:border-blue-700 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800"
+                        onClick={() => {
+                          if (item.itemCode) {
+                            void navigator.clipboard.writeText(item.itemCode);
+                          }
+                        }}
                         type="button"
                       >
-                        {item.itemCode ?? item.id.slice(0, 8)}
+                        {item.itemCode ?? 'ITEM-XXXX-0000'}
                       </button>
                     </td>
-                    <td className="px-4 py-3.5 text-slate-800 dark:text-[#f1f5f9]">
+                    <td className="px-4 py-3.5 text-sm font-medium text-gray-900 dark:text-gray-100">
                       {item.description ?? item.itemName}
                     </td>
-                    <td className="px-4 py-3.5">{item.category}</td>
-                    <td className="px-4 py-3.5">{item.location}</td>
-                    <td className="px-4 py-3.5">{formatDate(item.dateReported)}</td>
+                    <td className="px-4 py-3.5 text-sm text-gray-700 dark:text-gray-300">{item.category}</td>
+                    <td className="px-4 py-3.5 text-sm text-gray-700 dark:text-gray-300">{item.location}</td>
+                    <td className="px-4 py-3.5 text-sm text-gray-700 dark:text-gray-300">{formatDate(item.dateReported)}</td>
                     <td className="px-4 py-3.5">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                          item.status === 'PENDING'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : item.status === 'CLAIMED'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {formatStatus(item.status)}
-                      </span>
+                      <ItemStatusBadge status={item.status} />
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex flex-wrap gap-2">
-                        <Link
-                          className="rounded-md bg-[#1e3a5f] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#24456f]"
-                          href={`/items/${item.id}`}
-                        >
-                          View
-                        </Link>
-                        <Link
-                          className="rounded-md bg-[#1e3a5f] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#24456f]"
-                          href={`/items/${item.id}/edit`}
-                        >
-                          Update
-                        </Link>
                         <button
-                          className="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
-                          disabled={item.status === 'DISPOSED' || busyAction === `dispose-${item.id}`}
-                          onClick={() => disposeItem(item)}
+                          className="rounded-md bg-[#1e3a5f] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#24456f]"
+                          onClick={() => openDetailModal(item)}
                           type="button"
                         >
-                          {busyAction === `dispose-${item.id}` ? 'Saving...' : 'Dispose'}
+                          View
                         </button>
+                        {item.status === 'PENDING' ? (
+                          <>
+                            <button
+                              className="rounded-md bg-[#1e3a5f] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#24456f]"
+                              onClick={() => openClaimModal(item)}
+                              type="button"
+                            >
+                              Claim
+                            </button>
+                            <button
+                              className="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-600"
+                              onClick={() => openDisposeModal(item)}
+                              type="button"
+                            >
+                              Dispose
+                            </button>
+                          </>
+                        ) : null}
                         <button
                           className="rounded-md bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
                           disabled={busyAction === `delete-${item.id}`}
@@ -741,6 +731,26 @@ export function ManageItemsDashboard() {
           </button>
         </div>
       </div>
+
+      <ClaimItemModal
+        item={selectedItem}
+        onOpenChange={setClaimModalOpen}
+        onSuccess={() => setRefreshTick((current) => current + 1)}
+        open={claimModalOpen}
+      />
+
+      <DisposeItemModal
+        item={selectedItem}
+        onOpenChange={setDisposeModalOpen}
+        onSuccess={() => setRefreshTick((current) => current + 1)}
+        open={disposeModalOpen}
+      />
+
+      <ItemDetailModal
+        item={selectedItem}
+        onOpenChange={setDetailModalOpen}
+        open={detailModalOpen}
+      />
     </div>
   );
 }

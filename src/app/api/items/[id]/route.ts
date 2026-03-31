@@ -92,6 +92,10 @@ export async function PATCH(
     const normalizedStatus =
       typeof json.status === 'string' ? json.status.toUpperCase() : undefined;
     const shouldDispose = normalizedStatus === 'DISPOSED';
+    const disposeReason =
+      typeof json.disposeReason === 'string' && json.disposeReason.trim()
+        ? json.disposeReason.trim()
+        : undefined;
 
     if (!parsed.success) {
       if (normalizedStatus !== 'DISPOSED') {
@@ -155,7 +159,7 @@ export async function PATCH(
       action: shouldDispose ? 'ITEM_DISPOSED' : 'ITEM_UPDATED',
       entityType: 'ITEM',
       entityId: item.id,
-      details: shouldDispose ? { status: 'DISPOSED' } : parsed.data,
+      details: shouldDispose ? { status: 'DISPOSED', disposeReason } : parsed.data,
       request,
     });
 

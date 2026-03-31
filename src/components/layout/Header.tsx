@@ -2,17 +2,33 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { MouseEvent, useCallback, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { FAQModal } from '@/components/public/FAQModal';
 
 export function Header() {
+  const pathname = usePathname();
   const [faqOpen, setFaqOpen] = useState(false);
+
+  const handleHomeClick = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>) => {
+      if (pathname !== '/') {
+        return;
+      }
+
+      event.preventDefault();
+      setFaqOpen(false);
+      window.history.replaceState(null, '', '/');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    [pathname],
+  );
 
   return (
     <>
       <header className="bg-[#1a2744] text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 md:px-8">
-          <Link className="flex items-center gap-4" href="/">
+          <Link className="flex items-center gap-4" href="/" onClick={handleHomeClick}>
             <div className="shrink-0 bg-transparent">
               <Image
                 alt="NU Fairview Lost and Found logo"

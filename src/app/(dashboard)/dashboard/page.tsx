@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ItemStatusBadge } from '@/components/items/ItemStatusBadge';
 import { getAdminStatisticsData } from '@/lib/admin';
 import { formatDisplayDate } from '@/lib/utils';
 
@@ -71,20 +72,6 @@ const quickActions = [
   { href: '/admin/reports', label: 'Generate Report', bg: 'bg-[#0f172a] hover:bg-[#1e293b]', icon: ReportIcon },
 ] as const;
 
-const statusStyles: Record<string, string> = {
-  PENDING: 'bg-emerald-100 text-emerald-900',
-  CLAIMED: 'bg-blue-100 text-blue-800',
-  DISPOSED: 'bg-red-100 text-red-800',
-  RETURNED: 'bg-slate-100 text-slate-700',
-};
-
-const statusLabels: Record<string, string> = {
-  PENDING: 'AVAILABLE',
-  CLAIMED: 'CLAIMED',
-  DISPOSED: 'DISPOSED',
-  RETURNED: 'RETURNED',
-};
-
 export default async function Page() {
   const { totals, recentItems } = await getAdminStatisticsData();
 
@@ -124,71 +111,72 @@ export default async function Page() {
         ))}
       </section>
 
-      <section className="rounded-[14px] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-        <div className="mb-5 flex items-center justify-between">
+      <section className="rounded-[2rem] border border-slate-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.08)] dark:border-[#334155] dark:bg-[#1e293b]">
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-[#334155]">
           <div>
-            <h2 className="text-[17px] font-bold text-slate-900">Recent Items</h2>
-            <p className="text-[13px] text-slate-400">Latest records added to the system.</p>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-[#f1f5f9]">Recent Items</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Latest records added to the system.</p>
           </div>
-          <Link className="text-[13px] font-semibold text-indigo-500 hover:text-indigo-600" href="/items">
+          <Link
+            className="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+            href="/items"
+          >
             View All -&gt;
           </Link>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead>
-              <tr className="border-b border-slate-100 text-left">
-                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+          <table className="min-w-full divide-y divide-slate-200 dark:divide-[#334155]">
+            <thead className="bg-brand-navy text-white dark:bg-[#0a1628]">
+              <tr className="bg-brand-navy text-left text-xs font-semibold uppercase tracking-[0.08em] text-white dark:bg-[#0a1628]">
+                <th className="px-4 py-3">
                   Item ID
                 </th>
-                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                <th className="px-4 py-3">
                   Item Name
                 </th>
-                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                <th className="px-4 py-3">
                   Category
                 </th>
-                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                <th className="px-4 py-3">
                   Location Found
                 </th>
-                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                <th className="px-4 py-3">
                   Date Added
                 </th>
-                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                <th className="px-4 py-3">
                   Status
                 </th>
-                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                <th className="px-4 py-3">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-200 dark:divide-[#334155]">
               {recentItems.map((item) => (
                 <tr
                   key={item.id}
-                  className="border-b border-slate-100 text-[13px] text-gray-700 hover:bg-slate-50"
+                  className="bg-white transition-colors hover:bg-slate-50 dark:bg-[#1e293b] dark:hover:bg-[#0f172a]"
                 >
-                  <td className="px-4 py-[14px]">
-                    <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 font-mono text-[12px] font-semibold text-indigo-500">
-                      {item.itemCode ?? item.id.slice(0, 8)}
+                  <td className="px-4 py-3">
+                    <span className="inline-block rounded border border-blue-200 bg-blue-100 px-2 py-1 font-mono text-xs font-semibold text-blue-800 dark:border-blue-700 dark:bg-blue-900 dark:text-blue-200">
+                      {item.itemCode ?? item.id.slice(0, 12)}
                     </span>
                   </td>
-                  <td className="px-4 py-[14px] font-medium text-slate-800">{item.itemName}</td>
-                  <td className="px-4 py-[14px]">{item.category}</td>
-                  <td className="px-4 py-[14px]">{item.location}</td>
-                  <td className="px-4 py-[14px]">{formatDisplayDate(item.createdAt)}</td>
-                  <td className="px-4 py-[14px]">
-                    <span
-                      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                        statusStyles[item.status] ?? 'bg-slate-100 text-slate-700'
-                      }`}
-                    >
-                      {statusLabels[item.status] ?? item.status}
-                    </span>
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {item.itemName}
                   </td>
-                  <td className="px-4 py-[14px]">
+                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{item.category}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{item.location}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                    {formatDisplayDate(item.createdAt)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <ItemStatusBadge status={item.status} />
+                  </td>
+                  <td className="px-4 py-3">
                     <Link
-                      className="inline-flex items-center rounded-[8px] border border-slate-200 px-3.5 py-1.5 text-[12px] font-semibold text-gray-700 transition hover:border-indigo-500 hover:bg-indigo-500 hover:text-white"
+                      className="inline-flex rounded px-3 py-1.5 text-xs font-medium text-white transition-colors bg-cyan-500 hover:bg-cyan-600 dark:bg-cyan-600 dark:hover:bg-cyan-500"
                       href={`/items/${item.id}`}
                     >
                       View

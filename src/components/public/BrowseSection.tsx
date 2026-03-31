@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ItemStatusBadge } from '@/components/items/ItemStatusBadge';
 import { PaginationControls } from '@/components/items/PaginationControls';
 import { ItemsFilterBar } from '@/components/items/ItemsFilterBar';
-import { formatDisplayDate, formatItemCode } from '@/lib/utils';
+import { formatDisplayDate } from '@/lib/utils';
 import type { Item } from '@/types/item';
 import { ItemDetailModal } from './ItemDetailModal';
 
@@ -83,7 +83,7 @@ export function BrowseSection({
                 items.map((item, index) => (
                   <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/80'}>
                     <td className="px-5 py-4 font-semibold text-[#1e3a8a]">
-                      {item.itemCode ?? formatItemCode(item.id)}
+                      {item.itemCode ?? 'ITEM-XXXX-0000'}
                     </td>
                     <td className="px-5 py-4">{item.category}</td>
                     <td className="px-5 py-4">

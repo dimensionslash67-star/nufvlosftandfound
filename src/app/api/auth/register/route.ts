@@ -77,6 +77,7 @@ export async function POST(request: Request) {
       userId: user.id,
       email: user.email,
       role: user.role,
+      username: user.username,
     });
 
     const response = NextResponse.json(
@@ -97,4 +98,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'Registration failed.' }, { status: 500 });
   }
 }
-

@@ -51,7 +51,7 @@ export async function getAdminSessionFromCookies() {
     return null;
   }
 
-  return prisma.user.findUnique({
+  const user = await prisma.user.findUnique({
     where: { id: payload.userId },
     select: {
       id: true,
@@ -65,6 +65,12 @@ export async function getAdminSessionFromCookies() {
       updatedAt: true,
     },
   });
+
+  if (!user?.isActive) {
+    return null;
+  }
+
+  return user;
 }
 
 export async function getAdminStatisticsData() {
@@ -412,7 +418,7 @@ export async function getReportPreviewData({
     return {
       type,
       rows: rows.map((row) => ({
-        'Item Code': row.itemCode ?? row.id,
+        'Item Code': row.itemCode ?? 'ITEM-XXXX-0000',
         'Item Name': row.itemName,
         Category: row.category,
         Location: row.location,
@@ -497,7 +503,7 @@ export async function getReportPreviewData({
   return {
     type,
     rows: rows.map((row) => ({
-      'Item Code': row.itemCode ?? row.id,
+      'Item Code': row.itemCode ?? 'ITEM-XXXX-0000',
       'Item Name': row.itemName,
       Category: row.category,
       Location: row.location,

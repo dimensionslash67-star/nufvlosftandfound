@@ -207,35 +207,63 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const itemCode = await generateItemCode();
     const dateReported = parseOptionalDate(parsed.data.dateReported) ?? new Date();
     const dueDate = parseOptionalDate(parsed.data.dueDate);
+    let item = null;
+    let itemCode = '';
 
-    const item = await prisma.item.create({
-      data: {
-        itemCode,
-        itemName: parsed.data.itemName.trim(),
-        description: normalizeOptionalString(parsed.data.description),
-        category: parsed.data.category,
-        location: parsed.data.location.trim(),
-        dateReported,
-        dueDate,
-        contactInfo: normalizeOptionalString(parsed.data.contactInfo),
-        imageUrl: normalizeOptionalString(parsed.data.imageUrl),
-        reporterId: payload.userId,
-      },
-      include: {
-        reporter: {
-          select: {
-            id: true,
-            username: true,
-            email: true,
-            firstName: true,
-            lastName: true,
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      itemCode = await generateItemCode(dateReported);
+
+      try {
+        item = await prisma.item.create({
+          data: {
+            itemCode,
+            itemName: parsed.data.itemName.trim(),
+            description: normalizeOptionalString(parsed.data.description),
+            category: parsed.data.category,
+            location: parsed.data.location.trim(),
+            dateReported,
+            dueDate,
+            contactInfo: normalizeOptionalString(parsed.data.contactInfo),
+            imageUrl: normalizeOptionalString(parsed.data.imageUrl),
+            reporterId: payload.userId,
           },
-        },
-      },
-    });
+          include: {
+            reporter: {
+              select: {
+                id: true,
+                username: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        });
+        break;
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002' &&
+          (
+            (Array.isArray(error.meta?.target) && error.meta.target.some((target) => String(target).includes('item'))) ||
+            String(error.meta?.target ?? '').includes('item')
+          )
+        ) {
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    if (!item) {
+      return NextResponse.json(
+        { message: 'Unable to generate a unique item code.' },
+        { status: 500 },
+      );
+    }
 
     await createAuditLog({
       userId: payload.userId,

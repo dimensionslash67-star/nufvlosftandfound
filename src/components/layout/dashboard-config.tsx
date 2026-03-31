@@ -111,6 +111,15 @@ function SettingsIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+function ShieldIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M12 3 5 6v5c0 4.2 2.7 8 7 10 4.3-2 7-5.8 7-10V6l-7-3Z" />
+      <path d="m9.5 12 1.7 1.7 3.3-3.7" />
+    </BaseIcon>
+  );
+}
+
 function ExternalLinkIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <BaseIcon {...props}>
@@ -136,6 +145,7 @@ export type DashboardNavItem = {
   href: string;
   label: string;
   adminOnly?: boolean;
+  ownerOnly?: boolean;
   danger?: boolean;
   icon: (props: SVGProps<SVGSVGElement>) => JSX.Element;
   matches: RegExp[];
@@ -215,6 +225,13 @@ export const dashboardNavGroups: Array<{
         icon: SettingsIcon,
         adminOnly: true,
         matches: [/^\/admin\/settings$/],
+      },
+      {
+        href: '/owner',
+        label: 'Owner Console',
+        icon: ShieldIcon,
+        ownerOnly: true,
+        matches: [/^\/owner$/],
       },
       {
         href: '/',

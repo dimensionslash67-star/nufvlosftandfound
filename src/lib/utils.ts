@@ -20,12 +20,12 @@ export function formatDisplayDate(value?: string | Date | null, pattern = 'MMM d
   return format(date, pattern);
 }
 
-export function formatItemCode(id: string) {
-  if (id.startsWith('ITEM-')) {
-    return id;
+export function formatItemCode(value?: string | null) {
+  if (!value) {
+    return 'ITEM-XXXX-0000';
   }
 
-  return `LF-${id.slice(-6).toUpperCase()}`;
+  return value.startsWith('ITEM-') ? value : 'ITEM-XXXX-0000';
 }
 
 export function getUserDisplayName(user?: {

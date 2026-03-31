@@ -9,6 +9,10 @@ module.exports = {
   ],
   theme: {
     extend: {
+      animation: {
+        'bounce-slow': 'bounce 2.5s infinite',
+        'ping-slow': 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite',
+      },
       colors: {
         brand: {
           DEFAULT: '#0f766e',

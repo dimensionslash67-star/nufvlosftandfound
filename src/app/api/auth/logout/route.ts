@@ -5,6 +5,10 @@ import {
   getExpiredAuthCookieOptions,
   verifyJWT,
 } from '@/lib/auth';
+import {
+  getExpiredOwnerPinCookieOptions,
+  getOwnerPinCookieName,
+} from '@/lib/ownerGuard';
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get(getAuthCookieName())?.value;
@@ -24,6 +28,7 @@ export async function GET(request: NextRequest) {
 
   const response = NextResponse.redirect(new URL('/login', request.url));
   response.cookies.set(getAuthCookieName(), '', getExpiredAuthCookieOptions());
+  response.cookies.set(getOwnerPinCookieName(), '', getExpiredOwnerPinCookieOptions());
 
   return response;
 }

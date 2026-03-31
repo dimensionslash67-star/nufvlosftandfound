@@ -70,6 +70,7 @@ export async function PATCH(request: NextRequest) {
       select: {
         id: true,
         email: true,
+        username: true,
         role: true,
       },
     });
@@ -91,6 +92,7 @@ export async function PATCH(request: NextRequest) {
       userId: user.id,
       email: user.email,
       role: user.role,
+      username: user.username,
     });
 
     const response = NextResponse.json({ message: 'Profile updated successfully.' });

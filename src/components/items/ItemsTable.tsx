@@ -5,6 +5,8 @@ import { formatDisplayDate } from '@/lib/utils';
 import type { Item } from '@/types/item';
 import { ItemStatusBadge } from './ItemStatusBadge';
 
+const UNASSIGNED_ITEM_CODE = 'ITEM-XXXX-0000';
+
 export function ItemsTable({
   items,
   emptyMessage = 'No items found.',
@@ -50,17 +52,16 @@ export function ItemsTable({
                     <button
                       className="font-mono hover:text-brand-violet dark:hover:text-indigo-200"
                       onClick={async () => {
-                        const value = item.itemCode ?? '—';
-                        if (value !== '—') {
-                          await navigator.clipboard.writeText(value);
+                        if (item.itemCode) {
+                          await navigator.clipboard.writeText(item.itemCode);
                         }
                       }}
                       type="button"
                     >
-                      {item.itemCode ?? '—'}
+                      {item.itemCode ?? UNASSIGNED_ITEM_CODE}
                     </button>
                   ) : (
-                    <span className="font-mono">{item.itemCode ?? '—'}</span>
+                    <span className="font-mono">{item.itemCode ?? UNASSIGNED_ITEM_CODE}</span>
                   )}
                 </td>
                 <td className="px-5 py-4">{item.category}</td>

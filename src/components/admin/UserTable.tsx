@@ -179,8 +179,8 @@ export function UserTable({ initialUsers }: { initialUsers: ManageUser[] }) {
 
       <Table>
         <table className="min-w-full divide-y divide-slate-200 dark:divide-[#334155]">
-          <thead className="bg-white dark:bg-[#1e293b]">
-            <tr className="bg-white text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:bg-[#1e293b] dark:text-slate-400">
+          <thead className="bg-brand-navy text-white dark:bg-[#0a1628]">
+            <tr className="bg-brand-navy text-left text-xs font-semibold uppercase tracking-[0.2em] text-white dark:bg-[#0a1628]">
               <th className="px-5 py-4">Username</th>
               <th className="px-5 py-4">Email</th>
               <th className="px-5 py-4">Role</th>
@@ -191,7 +191,10 @@ export function UserTable({ initialUsers }: { initialUsers: ManageUser[] }) {
           </thead>
           <tbody className="divide-y divide-slate-200 text-sm text-slate-700 dark:divide-[#334155] dark:text-slate-200">
             {users.map((user) => (
-              <tr key={user.id}>
+              <tr
+                key={user.id}
+                className="bg-white transition-colors hover:bg-slate-50 dark:bg-[#1e293b] dark:hover:bg-[#0f172a]"
+              >
                 <td className="px-5 py-4 font-semibold text-slate-900 dark:text-[#f1f5f9]">{user.username}</td>
                 <td className="px-5 py-4">{user.email}</td>
                 <td className="px-5 py-4">
@@ -212,7 +215,9 @@ export function UserTable({ initialUsers }: { initialUsers: ManageUser[] }) {
                 <td className="px-5 py-4">
                   <span
                     className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                      user.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'
+                      user.isActive
+                        ? 'border border-green-300 bg-green-100 text-green-700 dark:border-green-700 dark:bg-green-900 dark:text-green-200'
+                        : 'border border-slate-300 bg-slate-200 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200'
                     }`}
                   >
                     {user.isActive ? 'Active' : 'Inactive'}

@@ -25,8 +25,12 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <p className="font-mono text-sm text-slate-500 dark:text-slate-400">{item.itemCode ?? '—'}</p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-[#f1f5f9]">{item.itemName}</h1>
+          <p className="font-mono text-sm text-slate-500 dark:text-slate-400">
+            {item.itemCode ?? 'ITEM-XXXX-0000'}
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-[#f1f5f9]">
+            {item.itemName}
+          </h1>
           <div className="mt-3">
             <ItemStatusBadge status={item.status} />
           </div>
@@ -50,26 +54,42 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
         <div className="space-y-5">
           <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)] dark:border-[#334155] dark:bg-[#1e293b]">
-            <h2 className="text-xl font-semibold text-slate-900 dark:text-[#f1f5f9]">Item Information</h2>
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-[#f1f5f9]">
+              Item Information
+            </h2>
             <dl className="mt-5 grid gap-4 text-sm text-slate-700 dark:text-slate-300 sm:grid-cols-2">
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Category</dt>
+                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                  Category
+                </dt>
                 <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">{item.category}</dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Date Found</dt>
-                <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">{formatDisplayDate(item.dateReported)}</dd>
+                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                  Date Found
+                </dt>
+                <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
+                  {formatDisplayDate(item.dateReported)}
+                </dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Location Found</dt>
+                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                  Location Found
+                </dt>
                 <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">{item.location}</dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Contact Info</dt>
-                <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">{item.contactInfo || 'Not provided'}</dd>
+                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                  Contact Info
+                </dt>
+                <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
+                  {item.contactInfo || 'Not provided'}
+                </dd>
               </div>
               <div className="sm:col-span-2">
-                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Description</dt>
+                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                  Description
+                </dt>
                 <dd className="mt-1 whitespace-pre-wrap text-slate-900 dark:text-[#f1f5f9]">
                   {item.description || 'No description provided.'}
                 </dd>
@@ -78,22 +98,38 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </section>
 
           <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)] dark:border-[#334155] dark:bg-[#1e293b]">
-            <h2 className="text-xl font-semibold text-slate-900 dark:text-[#f1f5f9]">Reporting Details</h2>
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-[#f1f5f9]">
+              Reporting Details
+            </h2>
             <dl className="mt-5 grid gap-4 text-sm text-slate-700 dark:text-slate-300 sm:grid-cols-2">
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Reporter</dt>
-                <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">{getUserDisplayName(item.reporter ?? undefined)}</dd>
+                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                  Reporter
+                </dt>
+                <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
+                  {getUserDisplayName(item.reporter ?? undefined)}
+                </dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Created At</dt>
-                <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">{formatDisplayDate(item.createdAt)}</dd>
+                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                  Created At
+                </dt>
+                <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
+                  {formatDisplayDate(item.createdAt)}
+                </dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Updated At</dt>
-                <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">{formatDisplayDate(item.updatedAt)}</dd>
+                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                  Updated At
+                </dt>
+                <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
+                  {formatDisplayDate(item.updatedAt)}
+                </dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Claimer</dt>
+                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                  Claimer
+                </dt>
                 <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
                   {item.claimer ? getUserDisplayName(item.claimer) : 'Unclaimed'}
                 </dd>

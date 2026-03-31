@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
@@ -40,6 +41,7 @@ function getPasswordStrength(password: string) {
 }
 
 export function ProfileSettings({ initialUser }: { initialUser: SettingsUser }) {
+  const router = useRouter();
   const [displayName, setDisplayName] = useState(getDisplayName(initialUser));
   const [email, setEmail] = useState(initialUser.email);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -94,6 +96,7 @@ export function ProfileSettings({ initialUser }: { initialUser: SettingsUser }) 
     }
 
     setProfileMessage(data.message ?? 'Profile updated.');
+    router.refresh();
   };
 
   const updatePassword = async () => {
@@ -137,6 +140,7 @@ export function ProfileSettings({ initialUser }: { initialUser: SettingsUser }) 
     setNewPassword('');
     setConfirmPassword('');
     setPasswordMessage(data.message ?? 'Password updated.');
+    router.refresh();
   };
 
   return (

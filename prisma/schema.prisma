@@ -8,20 +8,21 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  username      String    @unique
-  password      String
-  firstName     String?   @map("first_name")
-  lastName      String?   @map("last_name")
-  role          UserRole  @default(USER)
-  isActive      Boolean   @default(true) @map("is_active")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  username            String               @unique
+  password            String
+  firstName           String?              @map("first_name")
+  lastName            String?              @map("last_name")
+  role                UserRole             @default(USER)
+  isActive            Boolean              @default(true) @map("is_active")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
 
-  itemsReported Item[]    @relation("Reporter")
-  itemsClaimed  Item[]    @relation("Claimer")
-  auditLogs     AuditLog[]
+  itemsReported       Item[]               @relation("Reporter")
+  itemsClaimed        Item[]               @relation("Claimer")
+  auditLogs           AuditLog[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
 }
@@ -99,4 +100,18 @@ model Setting {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("settings")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("password_reset_tokens")
+  @@index([token])
+  @@index([userId])
 }

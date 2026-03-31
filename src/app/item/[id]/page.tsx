@@ -25,7 +25,9 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-10 md:px-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="font-mono text-sm text-slate-500">{item.itemCode ?? '—'}</p>
+            <p className="font-mono text-sm text-slate-500">
+              {item.itemCode ?? 'ITEM-XXXX-0000'}
+            </p>
             <h1 className="mt-2 text-3xl font-semibold text-slate-900">{item.itemName}</h1>
           </div>
           <div className="flex items-center gap-3">
@@ -47,19 +49,27 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
               <h2 className="text-xl font-semibold text-slate-900">Item Details</h2>
               <dl className="mt-5 grid gap-4 text-sm text-slate-700 sm:grid-cols-2">
                 <div>
-                  <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Category</dt>
+                  <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    Category
+                  </dt>
                   <dd className="mt-1 text-slate-900">{item.category}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Date Found</dt>
+                  <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    Date Found
+                  </dt>
                   <dd className="mt-1 text-slate-900">{formatDisplayDate(item.dateReported)}</dd>
                 </div>
                 <div className="sm:col-span-2">
-                  <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Location Found</dt>
+                  <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    Location Found
+                  </dt>
                   <dd className="mt-1 text-slate-900">{item.location}</dd>
                 </div>
                 <div className="sm:col-span-2">
-                  <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Description</dt>
+                  <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    Description
+                  </dt>
                   <dd className="mt-1 whitespace-pre-wrap text-slate-900">
                     {item.description || 'No description provided.'}
                   </dd>
@@ -70,13 +80,16 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
               <h2 className="text-xl font-semibold text-slate-900">Submit a Claim</h2>
               <p className="mt-3 text-sm leading-6 text-slate-600">
-                Share identifying details first, then continue to the staff login page to complete the formal verification process.
+                Share identifying details first, then continue to the staff login page to complete
+                the formal verification process.
               </p>
               <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
                 <p className="font-semibold text-slate-900">
                   Reported by {getUserDisplayName(item.reporter ?? undefined)}
                 </p>
-                <p className="mt-1">Contact info: {item.contactInfo || 'Available through the lost and found office.'}</p>
+                <p className="mt-1">
+                  Contact info: {item.contactInfo || 'Available through the lost and found office.'}
+                </p>
               </div>
               <div className="mt-5">
                 <PublicClaimForm itemId={item.id} />
