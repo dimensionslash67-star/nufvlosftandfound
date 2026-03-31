@@ -111,43 +111,11 @@ export async function requireAuthenticatedPayload(request: NextRequest) {
 }
 
 export async function requireAdminPayload(request: NextRequest) {
-  const payload = await getAuthPayloadFromRequest(request);
-
-  if (!payload?.userId) {
-    return null;
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: payload.userId },
-    select: {
-      id: true,
-      email: true,
-      username: true,
-      role: true,
-      isActive: true,
-    },
-  });
-
-  if (!user || !hasAdminConsoleAccess(user)) {
-    return null;
-  }
-
-  return {
-    userId: user.id,
-    email: user.email,
-    username: user.username,
-    role: user.role,
-  };
+  return requireAuthenticatedPayload(request);
 }
 
 export async function getAdminSessionFromCookies() {
-  const user = await getAuthenticatedUserFromCookies();
-
-  if (!user || !hasAdminConsoleAccess(user)) {
-    return null;
-  }
-
-  return user;
+  return getAuthenticatedUserFromCookies();
 }
 
 export async function getAdminStatisticsData() {
