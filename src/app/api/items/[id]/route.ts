@@ -50,6 +50,7 @@ async function getCurrentUserFromPayload(userId: string) {
     where: { id: userId },
     select: {
       id: true,
+      email: true,
       role: true,
       isActive: true,
     },
@@ -211,7 +212,7 @@ export async function DELETE(
     const { id } = await params;
     const existingItem = await prisma.item.findUnique({
       where: { id },
-      select: { id: true, reporterId: true, itemName: true },
+      select: { id: true, reporterId: true, itemCode: true, itemName: true },
     });
 
     if (!existingItem) {
@@ -229,7 +230,13 @@ export async function DELETE(
       action: 'ITEM_DELETED',
       entityType: 'ITEM',
       entityId: id,
-      details: { itemName: existingItem.itemName },
+      details: {
+        itemCode: existingItem.itemCode,
+        itemName: existingItem.itemName,
+        deletedByRole: currentUser.role,
+        deletedByEmail: currentUser.email,
+        deletedByScope: currentUser.role === 'ADMIN' ? 'ADMIN' : 'REPORTER',
+      },
       request,
     });
 

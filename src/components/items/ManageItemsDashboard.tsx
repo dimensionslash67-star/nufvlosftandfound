@@ -3,12 +3,15 @@
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { DeleteItemModal } from '@/components/items/DeleteItemModal';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useAuth } from '@/hooks/useAuth';
 import type { Item } from '@/types/item';
 import { ClaimItemModal } from '@/components/items/ClaimItemModal';
 import { DisposeItemModal } from '@/components/items/DisposeItemModal';
 import { ItemDetailModal } from '@/components/items/ItemDetailModal';
 import { ItemStatusBadge } from '@/components/items/ItemStatusBadge';
+import { Toast } from '@/components/ui/Toast';
 
 type FilterState = {
   search: string;
@@ -204,6 +207,7 @@ export function ManageItemsDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const searchParamsString = searchParams.toString();
+  const { user, loading: authLoading } = useAuth();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [filters, setFilters] = useState<FilterState>(() => getInitialState(searchParams));
   const debouncedFilters = useDebounce(filters, 300);
@@ -219,7 +223,10 @@ export function ManageItemsDashboard() {
   const [claimModalOpen, setClaimModalOpen] = useState(false);
   const [disposeModalOpen, setDisposeModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ variant: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
     setFilters(getInitialState(searchParams));
@@ -379,19 +386,38 @@ export function ManageItemsDashboard() {
     }
   };
 
-  const deleteItem = async (item: Item) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${item.itemCode ?? item.itemName}?`,
-    );
+  const canDeleteItem = (item: Item) => {
+    if (!user) {
+      return false;
+    }
 
-    if (!confirmed) {
+    return user.role === 'ADMIN' || item.reporterId === user.id;
+  };
+
+  const openDeleteModal = (item: Item) => {
+    setSelectedItem(item);
+    setDeleteError(null);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteModalChange = (open: boolean) => {
+    setDeleteModalOpen(open);
+
+    if (!open) {
+      setDeleteError(null);
+    }
+  };
+
+  const deleteItem = async () => {
+    if (!selectedItem) {
       return;
     }
 
-    setBusyAction(`delete-${item.id}`);
+    setBusyAction(`delete-${selectedItem.id}`);
+    setDeleteError(null);
 
     try {
-      const response = await fetch(`/api/items/${item.id}`, {
+      const response = await fetch(`/api/items/${selectedItem.id}`, {
         method: 'DELETE',
       });
       const data = await response.json().catch(() => ({ message: 'Unable to delete item.' }));
@@ -400,10 +426,21 @@ export function ManageItemsDashboard() {
         throw new Error(data.message ?? 'Unable to delete item.');
       }
 
+      setDeleteModalOpen(false);
+      setSelectedItem(null);
+      setToast({
+        variant: 'success',
+        message: `${data.message ?? 'Item deleted successfully.'}`,
+      });
       setRefreshTick((current) => current + 1);
     } catch (error) {
       console.error('Delete item error:', error);
-      window.alert(error instanceof Error ? error.message : 'Unable to delete item.');
+      const message = error instanceof Error ? error.message : 'Unable to delete item.';
+      setDeleteError(message);
+      setToast({
+        variant: 'error',
+        message,
+      });
     } finally {
       setBusyAction(null);
     }
@@ -690,14 +727,16 @@ export function ManageItemsDashboard() {
                             </button>
                           </>
                         ) : null}
-                        <button
-                          className="rounded-md bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
-                          disabled={busyAction === `delete-${item.id}`}
-                          onClick={() => deleteItem(item)}
-                          type="button"
-                        >
-                          {busyAction === `delete-${item.id}` ? 'Deleting...' : 'Delete'}
-                        </button>
+                        {!authLoading && canDeleteItem(item) ? (
+                          <button
+                            className="rounded-md bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                            disabled={busyAction === `delete-${item.id}`}
+                            onClick={() => openDeleteModal(item)}
+                            type="button"
+                          >
+                            Delete
+                          </button>
+                        ) : null}
                       </div>
                     </td>
                   </tr>
@@ -751,6 +790,23 @@ export function ManageItemsDashboard() {
         onOpenChange={setDetailModalOpen}
         open={detailModalOpen}
       />
+
+      <DeleteItemModal
+        error={deleteError}
+        item={selectedItem}
+        loading={busyAction === `delete-${selectedItem?.id}`}
+        onConfirm={deleteItem}
+        onOpenChange={handleDeleteModalChange}
+        open={deleteModalOpen}
+      />
+
+      {toast ? (
+        <Toast
+          message={toast.message}
+          onClose={() => setToast(null)}
+          variant={toast.variant}
+        />
+      ) : null}
     </div>
   );
 }
