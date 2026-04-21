@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuthenticatedPayload } from '@/lib/admin';
+import { requireAdminConsolePayload } from '@/lib/admin';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
-  const guard = await requireAuthenticatedPayload(request);
+  const guard = await requireAdminConsolePayload(request);
 
-  if (guard) {
+  if (!guard) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 

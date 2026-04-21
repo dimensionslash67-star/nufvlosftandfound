@@ -1,9 +1,9 @@
 import { NextRequest } from 'next/server';
-import { requireAuthenticatedPayload } from '@/lib/admin';
+import { requireAdminConsolePayload } from '@/lib/admin';
 import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
-  const user = await requireAuthenticatedPayload(request);
+  const user = await requireAdminConsolePayload(request);
 
   if (!user) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {

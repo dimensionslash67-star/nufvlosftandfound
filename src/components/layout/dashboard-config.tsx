@@ -226,10 +226,11 @@ export const dashboardNavGroups: Array<{
         matches: [/^\/admin\/settings$/],
       },
       {
-        href: '/owner',
+        href: '/admin/database',
         label: 'Database',
         icon: ShieldIcon,
-        matches: [/^\/owner$/],
+        adminOnly: true,
+        matches: [/^\/admin\/database$/, /^\/dashboard\/admin\/database$/, /^\/owner$/],
       },
       {
         href: '/',
@@ -260,6 +261,8 @@ const dashboardTitleMap: Array<{ match: RegExp; title: string }> = [
   { match: /^\/admin\/reports$/, title: 'Reports' },
   { match: /^\/admin\/audit-logs$/, title: 'Audit Logs' },
   { match: /^\/admin\/settings$/, title: 'Settings' },
+  { match: /^\/admin\/database$/, title: 'Database' },
+  { match: /^\/dashboard\/admin\/database$/, title: 'Database' },
   { match: /^\/admin\/import$/, title: 'CSV Import' },
 ];
 

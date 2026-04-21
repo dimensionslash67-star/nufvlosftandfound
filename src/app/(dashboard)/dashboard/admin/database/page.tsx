@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
-export default function OwnerPage() {
+export default function DashboardAdminDatabaseAliasPage() {
   redirect('/admin/database');
 }

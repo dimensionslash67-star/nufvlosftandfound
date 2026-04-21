@@ -75,6 +75,29 @@ export function ReportGenerator({
     }),
   }));
 
+  const renderCellValue = (column: string, value: unknown) => {
+    if (column.toLowerCase() === 'item code') {
+      const itemCode = String(value ?? '');
+      const missing = !itemCode || itemCode === 'MISSING CODE' || itemCode === 'N/A';
+
+      return missing ? (
+        <span className="font-semibold text-red-500 dark:text-red-300">MISSING CODE</span>
+      ) : (
+        <span className="font-mono font-semibold text-blue-600 dark:text-blue-300">{itemCode}</span>
+      );
+    }
+
+    if (value instanceof Date || (typeof value === 'string' && value.includes('T'))) {
+      return formatDisplayDate(value as string);
+    }
+
+    if (typeof value === 'object' && value !== null) {
+      return JSON.stringify(value);
+    }
+
+    return String(value);
+  };
+
   return (
     <div className="space-y-6">
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -290,11 +313,7 @@ export function ReportGenerator({
 
                       return (
                         <td key={valueIndex} className="px-5 py-4">
-                          {value instanceof Date || (typeof value === 'string' && value.includes('T'))
-                            ? formatDisplayDate(value as string)
-                            : typeof value === 'object'
-                              ? JSON.stringify(value)
-                              : String(value)}
+                          {renderCellValue(column, value)}
                         </td>
                       );
                     })}

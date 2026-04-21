@@ -110,8 +110,28 @@ export async function requireAuthenticatedPayload(request: NextRequest) {
   };
 }
 
+export async function requireAdminConsolePayload(request: NextRequest) {
+  const user = await requireAuthenticatedPayload(request);
+
+  if (!user || (user.role !== 'ADMIN' && !isOwnerEmail(user.email))) {
+    return null;
+  }
+
+  return user;
+}
+
 export async function requireAdminPayload(request: NextRequest) {
   return requireAuthenticatedPayload(request);
+}
+
+export async function getAdminConsoleUserFromCookies() {
+  const user = await getAuthenticatedUserFromCookies();
+
+  if (!user || !hasAdminConsoleAccess(user)) {
+    return null;
+  }
+
+  return user;
 }
 
 export async function getAdminSessionFromCookies() {
@@ -463,7 +483,7 @@ export async function getReportPreviewData({
     return {
       type,
       rows: rows.map((row) => ({
-        'Item Code': row.itemCode ?? 'ITEM-XXXX-0000',
+        'Item Code': row.itemCode ?? 'MISSING CODE',
         'Item Name': row.itemName,
         Category: row.category,
         Location: row.location,
@@ -548,7 +568,7 @@ export async function getReportPreviewData({
   return {
     type,
     rows: rows.map((row) => ({
-      'Item Code': row.itemCode ?? 'ITEM-XXXX-0000',
+      'Item Code': row.itemCode ?? 'MISSING CODE',
       'Item Name': row.itemName,
       Category: row.category,
       Location: row.location,
