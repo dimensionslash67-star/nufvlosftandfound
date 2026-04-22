@@ -38,6 +38,15 @@ export function useAuth(initialUser: SessionUser | null = null) {
   useEffect(() => {
     let active = true;
 
+    if (initialUser) {
+      setUser(initialUser);
+      setLoading(false);
+
+      return () => {
+        active = false;
+      };
+    }
+
     const loadSession = async (showLoading = false) => {
       if (showLoading) {
         setLoading(true);
@@ -70,24 +79,10 @@ export function useAuth(initialUser: SessionUser | null = null) {
       }
     };
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        void loadSession();
-      }
-    };
-
-    const handlePageShow = () => {
-      void loadSession();
-    };
-
     void loadSession(!initialUser);
-    window.addEventListener('pageshow', handlePageShow);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       active = false;
-      window.removeEventListener('pageshow', handlePageShow);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [initialUser]);
 

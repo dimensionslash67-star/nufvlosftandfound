@@ -1,10 +1,9 @@
-import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { DeleteItemButton } from '@/components/items/DeleteItemButton';
 import { ItemCard } from '@/components/items/ItemCard';
 import { ItemStatusBadge } from '@/components/items/ItemStatusBadge';
-import { getAuthCookieName, verifyJWT } from '@/lib/auth';
+import { getAuthenticatedUserFromCookies } from '@/lib/admin';
 import { getItemById } from '@/lib/items';
 import { formatDisplayDate, getUserDisplayName } from '@/lib/utils';
 
@@ -16,10 +15,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     notFound();
   }
 
-  const cookieStore = await cookies();
-  const token = cookieStore.get(getAuthCookieName())?.value;
-  const session = token ? await verifyJWT(token) : null;
-  const canManage = session?.role === 'ADMIN' || session?.userId === item.reporterId;
+  const currentUser = await getAuthenticatedUserFromCookies();
+  const canManage = currentUser?.role === 'ADMIN' || currentUser?.id === item.reporterId;
 
   return (
     <div className="space-y-6">

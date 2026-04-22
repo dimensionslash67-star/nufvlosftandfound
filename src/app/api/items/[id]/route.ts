@@ -223,6 +223,8 @@ export async function DELETE(
       return NextResponse.json({ message: 'Forbidden.' }, { status: 403 });
     }
 
+    const deletedFrom = request.headers.get('x-delete-source') ?? 'UNKNOWN';
+
     await prisma.item.delete({ where: { id } });
 
     await createAuditLog({
@@ -236,6 +238,7 @@ export async function DELETE(
         deletedByRole: currentUser.role,
         deletedByEmail: currentUser.email,
         deletedByScope: currentUser.role === 'ADMIN' ? 'ADMIN' : 'REPORTER',
+        deletedFrom,
       },
       request,
     });

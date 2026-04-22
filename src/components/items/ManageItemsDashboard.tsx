@@ -386,7 +386,7 @@ export function ManageItemsDashboard() {
     }
   };
 
-  const canDeleteItem = (item: Item) => {
+  const canManageItem = (item: Item) => {
     if (!user) {
       return false;
     }
@@ -709,6 +709,14 @@ export function ManageItemsDashboard() {
                         >
                           View
                         </button>
+                        {!authLoading && canManageItem(item) ? (
+                          <Link
+                            className="rounded-md bg-indigo-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-600"
+                            href={`/items/${item.id}/edit`}
+                          >
+                            Edit
+                          </Link>
+                        ) : null}
                         {item.status === 'PENDING' ? (
                           <>
                             <button
@@ -718,16 +726,18 @@ export function ManageItemsDashboard() {
                             >
                               Claim
                             </button>
-                            <button
-                              className="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-600"
-                              onClick={() => openDisposeModal(item)}
-                              type="button"
-                            >
-                              Dispose
-                            </button>
+                            {!authLoading && canManageItem(item) ? (
+                              <button
+                                className="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-600"
+                                onClick={() => openDisposeModal(item)}
+                                type="button"
+                              >
+                                Dispose
+                              </button>
+                            ) : null}
                           </>
                         ) : null}
-                        {!authLoading && canDeleteItem(item) ? (
+                        {!authLoading && canManageItem(item) ? (
                           <button
                             className="rounded-md bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
                             disabled={busyAction === `delete-${item.id}`}
