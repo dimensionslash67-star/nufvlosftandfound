@@ -63,6 +63,8 @@ function buildItemWhere(
   if (options?.publicOnly) {
     andClauses.push({ status: 'PENDING' });
     andClauses.push({ isFlagged: false });
+    andClauses.push({ isDisposed: false });
+    andClauses.push({ disposalDate: null });
   }
 
   if (filters.disposal === 'true') {

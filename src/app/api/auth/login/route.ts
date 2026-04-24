@@ -60,6 +60,7 @@ export async function POST(request: Request) {
       email: user.email,
       role: user.role,
       username: user.username,
+      rememberMe: parsed.data.rememberMe,
     });
 
     await createAuditLog({
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
       token,
     });
 
-    response.cookies.set(getAuthCookieName(), token, getAuthCookieOptions());
+    response.cookies.set(getAuthCookieName(), token, getAuthCookieOptions(parsed.data.rememberMe));
 
     return response;
   } catch (error) {

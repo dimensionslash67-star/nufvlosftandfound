@@ -54,6 +54,8 @@ export function buildItemWhere(
 
   if (defaults?.publicOnly) {
     where.isFlagged = false;
+    where.isDisposed = false;
+    where.disposalDate = null;
   }
 
   if (filters.dateFrom || filters.dateTo) {

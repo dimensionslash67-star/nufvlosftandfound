@@ -3,19 +3,39 @@ import type { NextRequest } from 'next/server';
 import { getAuthCookieName, verifyJWT } from '@/lib/auth';
 
 const protectedRoutes = ['/dashboard', '/items', '/search', '/admin', '/owner', '/settings'];
+const publicAuthRoutes = ['/login', '/register'];
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const isPublicAuthRoute = publicAuthRoutes.includes(pathname);
   const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
+
+  const token = request.cookies.get(getAuthCookieName())?.value;
+
+  if (isPublicAuthRoute) {
+    if (!token) {
+      return NextResponse.next();
+    }
+
+    const payload = await verifyJWT(token);
+
+    if (!payload?.userId) {
+      const response = NextResponse.next();
+      response.cookies.delete(getAuthCookieName());
+      return response;
+    }
+
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
 
   if (!isProtectedRoute) {
     return NextResponse.next();
   }
 
-  const token = request.cookies.get(getAuthCookieName())?.value;
-
   if (!token) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   try {
@@ -41,7 +61,10 @@ export async function middleware(request: NextRequest) {
     });
   } catch (error) {
     console.error('Token verification error:', error);
-    const response = NextResponse.redirect(new URL('/login', request.url));
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirect', pathname);
+    loginUrl.searchParams.set('session_expired', 'true');
+    const response = NextResponse.redirect(loginUrl);
     response.cookies.delete(getAuthCookieName());
     return response;
   }
@@ -49,6 +72,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/login',
+    '/register',
     '/dashboard/:path*',
     '/items/:path*',
     '/search/:path*',

@@ -5,6 +5,7 @@ import {
   createJWT,
   getAuthCookieName,
   getAuthCookieOptions,
+  getAuthPayloadFromRequest,
 } from '@/lib/auth';
 import { requireAdminPayload } from '@/lib/admin';
 import { prisma } from '@/lib/prisma';
@@ -25,6 +26,7 @@ function splitDisplayName(displayName: string) {
 export async function PATCH(request: NextRequest) {
   try {
     const admin = await requireAdminPayload(request);
+    const existingPayload = await getAuthPayloadFromRequest(request);
 
     if (!admin) {
       return NextResponse.json({ message: 'Forbidden.' }, { status: 403 });
@@ -93,10 +95,15 @@ export async function PATCH(request: NextRequest) {
       email: user.email,
       role: user.role,
       username: user.username,
+      rememberMe: existingPayload?.rememberMe,
     });
 
     const response = NextResponse.json({ message: 'Profile updated successfully.' });
-    response.cookies.set(getAuthCookieName(), token, getAuthCookieOptions());
+    response.cookies.set(
+      getAuthCookieName(),
+      token,
+      getAuthCookieOptions(existingPayload?.rememberMe),
+    );
     return response;
   } catch (error) {
     console.error('Profile settings update error:', error);

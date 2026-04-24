@@ -1,7 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -31,6 +31,7 @@ function LockIcon() {
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
@@ -45,8 +46,15 @@ export function LoginForm() {
     defaultValues: {
       email: '',
       password: '',
+      rememberMe: false,
     },
   });
+
+  useEffect(() => {
+    if (searchParams.get('session_expired') === 'true') {
+      setSubmitError('Your session expired. Please log in again.');
+    }
+  }, [searchParams]);
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null);
@@ -66,7 +74,8 @@ export function LoginForm() {
       return;
     }
 
-    router.push('/dashboard');
+    const redirectTarget = searchParams.get('redirect');
+    router.push(redirectTarget || '/dashboard');
     router.refresh();
   });
 
@@ -123,7 +132,11 @@ export function LoginForm() {
 
         <div className="flex items-center justify-between gap-3 text-sm">
           <label className="flex items-center gap-2 text-slate-600">
-            <input className="h-4 w-4 rounded border-slate-300 text-[#7c3aed]" type="checkbox" />
+            <input
+              className="h-4 w-4 rounded border-slate-300 text-[#7c3aed]"
+              type="checkbox"
+              {...register('rememberMe')}
+            />
             <span>Remember me</span>
           </label>
           <button

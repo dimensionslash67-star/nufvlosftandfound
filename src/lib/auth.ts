@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { jwtVerify, SignJWT, type JWTPayload } from 'jose';
+import { cookies } from 'next/headers';
 import type { NextRequest } from 'next/server';
 
 export type AuthJWTPayload = JWTPayload & {
@@ -7,6 +8,7 @@ export type AuthJWTPayload = JWTPayload & {
   email: string;
   role: string;
   username: string;
+  rememberMe?: boolean;
 };
 
 export type OwnerPinJWTPayload = JWTPayload & {
@@ -15,7 +17,8 @@ export type OwnerPinJWTPayload = JWTPayload & {
 };
 
 const AUTH_COOKIE_NAME = 'auth-token';
-const AUTH_TOKEN_MAX_AGE = 60 * 60 * 24 * 7;
+const AUTH_TOKEN_MAX_AGE = 60 * 60 * 24;
+const AUTH_TOKEN_MAX_AGE_REMEMBER_ME = 60 * 60 * 24 * 30;
 
 function getJWTSecret() {
   const secret = process.env.JWT_SECRET;
@@ -31,13 +34,13 @@ export function getAuthCookieName() {
   return AUTH_COOKIE_NAME;
 }
 
-export function getAuthCookieOptions() {
+export function getAuthCookieOptions(rememberMe = false) {
   return {
     httpOnly: true,
     sameSite: 'lax' as const,
     secure: process.env.NODE_ENV === 'production',
     path: '/',
-    maxAge: AUTH_TOKEN_MAX_AGE,
+    maxAge: rememberMe ? AUTH_TOKEN_MAX_AGE_REMEMBER_ME : AUTH_TOKEN_MAX_AGE,
   };
 }
 
@@ -61,17 +64,19 @@ export async function createJWT(payload: {
   email: string;
   role: string;
   username: string;
+  rememberMe?: boolean;
 }): Promise<string> {
   return new SignJWT({
     userId: payload.userId,
     email: payload.email,
     role: payload.role,
     username: payload.username,
+    rememberMe: Boolean(payload.rememberMe),
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(payload.userId)
     .setIssuedAt()
-    .setExpirationTime('7d')
+    .setExpirationTime(payload.rememberMe ? '30d' : '24h')
     .sign(getJWTSecret());
 }
 
@@ -127,6 +132,17 @@ export async function verifyOwnerPinJWT(token: string): Promise<OwnerPinJWTPaylo
 
 export async function getAuthPayloadFromRequest(request: NextRequest) {
   const token = request.cookies.get(getAuthCookieName())?.value;
+
+  if (!token) {
+    return null;
+  }
+
+  return verifyJWT(token);
+}
+
+export async function getCurrentUser() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(getAuthCookieName())?.value;
 
   if (!token) {
     return null;
