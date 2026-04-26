@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { Prisma } from '@prisma/client';
 import { eachDayOfInterval, format, startOfDay, subDays } from 'date-fns';
 import type { NextRequest } from 'next/server';
@@ -48,6 +48,30 @@ export function hasAdminConsoleAccess(user: Pick<AdminSessionUser, 'email' | 'ro
   return user.isActive && user.role === 'ADMIN';
 }
 
+async function getAuthenticatedUserFromHeaders(): Promise<AdminSessionUser | null> {
+  const requestHeaders = await headers();
+  const id = requestHeaders.get('x-user-id');
+  const email = requestHeaders.get('x-user-email');
+  const username = requestHeaders.get('x-user-username');
+  const role = requestHeaders.get('x-user-role');
+
+  if (!id || !email || !username || (role !== 'ADMIN' && role !== 'USER')) {
+    return null;
+  }
+
+  return {
+    id,
+    email,
+    username,
+    firstName: null,
+    lastName: null,
+    role,
+    isActive: true,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
+  };
+}
+
 export async function getAuthenticatedUserFromCookies() {
   const cookieStore = await cookies();
   const token = cookieStore.get(getAuthCookieName())?.value;
@@ -77,6 +101,16 @@ export async function getAuthenticatedUserFromCookies() {
   }
 
   return user;
+}
+
+export async function getAuthenticatedUserFromRequest() {
+  const user = await getAuthenticatedUserFromCookies();
+
+  if (user) {
+    return user;
+  }
+
+  return getAuthenticatedUserFromHeaders();
 }
 
 export async function requireAuthenticatedPayload(request: NextRequest) {
@@ -125,6 +159,16 @@ export async function requireAdminPayload(request: NextRequest) {
 
 export async function getAdminConsoleUserFromCookies() {
   const user = await getAuthenticatedUserFromCookies();
+
+  if (!user || !hasAdminConsoleAccess(user)) {
+    return null;
+  }
+
+  return user;
+}
+
+export async function getAdminConsoleUserFromRequest() {
+  const user = await getAuthenticatedUserFromRequest();
 
   if (!user || !hasAdminConsoleAccess(user)) {
     return null;

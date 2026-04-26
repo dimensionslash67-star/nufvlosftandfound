@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, type SessionUser } from '@/hooks/useAuth';
 
 const LEGACY_CATEGORY_OPTIONS = [
   'Electronics',
@@ -57,9 +57,13 @@ function getDisplayName(user: {
 const fieldClassName =
   'w-full rounded-lg border border-slate-200 bg-white px-[14px] py-[10px] text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/15 dark:border-[#334155] dark:bg-[#0f172a] dark:text-[#f1f5f9] dark:[color-scheme:dark]';
 
-export function LegacyAddItemForm() {
+export function LegacyAddItemForm({
+  initialUser = null,
+}: {
+  initialUser?: SessionUser | null;
+}) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading } = useAuth(initialUser);
   const receivedBy = useMemo(() => getDisplayName(user), [user]);
 
   const [values, setValues] = useState({
@@ -98,7 +102,11 @@ export function LegacyAddItemForm() {
     if (!values.locationSpecific.trim()) nextErrors.locationSpecific = 'Specific place is required.';
     if (!values.dateReceived) nextErrors.dateReceived = 'Date received is required.';
     if (!values.retentionDays) nextErrors.retentionDays = 'Retention period is required.';
-    if (!receivedBy) nextErrors.receivedBy = 'Waiting for logged-in user details.';
+    if (loading) {
+      nextErrors.receivedBy = 'Waiting for logged-in user details.';
+    } else if (!receivedBy) {
+      nextErrors.receivedBy = 'Unable to load the signed-in user details.';
+    }
     if (!values.description.trim()) nextErrors.description = 'Item description is required.';
 
     setErrors(nextErrors);
@@ -246,8 +254,16 @@ export function LegacyAddItemForm() {
           <input
             className={`${fieldClassName} cursor-not-allowed opacity-80`}
             readOnly
-            value={receivedBy || 'Loading...'}
+            value={
+              receivedBy ||
+              (loading ? 'Loading logged-in user...' : 'Signed-in user unavailable')
+            }
           />
+          {receivedBy ? (
+            <p className="mt-2 text-xs font-medium text-emerald-600">
+              Auto-populated with your signed-in account.
+            </p>
+          ) : null}
         </Field>
 
         <Field className="md:col-span-2" label="Item Description" required error={errors.description}>
@@ -268,7 +284,7 @@ export function LegacyAddItemForm() {
       <div className="mt-8 flex justify-end">
         <button
           className="inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 md:w-auto"
-          disabled={isSubmitting}
+          disabled={isSubmitting || loading || !receivedBy}
           type="submit"
         >
           {isSubmitting ? 'Adding Item...' : 'Add Item'}

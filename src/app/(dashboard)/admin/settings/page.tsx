@@ -1,9 +1,9 @@
 import { headers } from 'next/headers';
 import { ProfileSettings } from '@/components/admin/ProfileSettings';
-import { getAuthenticatedUserFromCookies } from '@/lib/admin';
+import { getAuthenticatedUserFromRequest } from '@/lib/admin';
 
 export default async function Page() {
-  const user = await getAuthenticatedUserFromCookies();
+  const user = await getAuthenticatedUserFromRequest();
   const requestHeaders = await headers();
   const resolvedUser = user ?? {
     id: requestHeaders.get('x-user-id') ?? '',
