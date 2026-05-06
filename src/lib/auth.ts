@@ -51,6 +51,24 @@ export function getExpiredAuthCookieOptions() {
   };
 }
 
+function readCookieValue(cookieHeader: string | null, cookieName: string) {
+  if (!cookieHeader) {
+    return null;
+  }
+
+  const cookiePrefix = `${cookieName}=`;
+  const matchingCookie = cookieHeader
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(cookiePrefix));
+
+  if (!matchingCookie) {
+    return null;
+  }
+
+  return decodeURIComponent(matchingCookie.slice(cookiePrefix.length));
+}
+
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
 }
@@ -131,7 +149,25 @@ export async function verifyOwnerPinJWT(token: string): Promise<OwnerPinJWTPaylo
 }
 
 export async function getAuthPayloadFromRequest(request: NextRequest) {
-  const token = request.cookies.get(getAuthCookieName())?.value;
+  const cookieName = getAuthCookieName();
+  let token = request.cookies.get(cookieName)?.value;
+
+  if (!token) {
+    token = readCookieValue(request.headers.get('cookie'), cookieName) ?? undefined;
+  }
+
+  if (!token) {
+    const authorization = request.headers.get('authorization');
+
+    if (authorization?.startsWith('Bearer ')) {
+      token = authorization.slice('Bearer '.length).trim();
+    }
+  }
+
+  if (!token) {
+    const cookieStore = await cookies();
+    token = cookieStore.get(cookieName)?.value;
+  }
 
   if (!token) {
     return null;

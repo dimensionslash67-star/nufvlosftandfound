@@ -107,6 +107,7 @@ export function LegacyAddItemForm() {
 
     const response = await fetch('/api/items', {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
       },
