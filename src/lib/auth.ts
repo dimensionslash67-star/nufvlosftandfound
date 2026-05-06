@@ -149,6 +149,20 @@ export async function verifyOwnerPinJWT(token: string): Promise<OwnerPinJWTPaylo
 }
 
 export async function getAuthPayloadFromRequest(request: NextRequest) {
+  const headerUserId = request.headers.get('x-user-id');
+  const headerEmail = request.headers.get('x-user-email');
+  const headerRole = request.headers.get('x-user-role');
+  const headerUsername = request.headers.get('x-user-username');
+
+  if (headerUserId && headerEmail && headerRole && headerUsername) {
+    return {
+      userId: headerUserId,
+      email: headerEmail,
+      role: headerRole,
+      username: headerUsername,
+    } as AuthJWTPayload;
+  }
+
   const cookieName = getAuthCookieName();
   let token = request.cookies.get(cookieName)?.value;
 
