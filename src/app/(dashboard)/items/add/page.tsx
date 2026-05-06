@@ -1,9 +1,6 @@
 import { LegacyAddItemForm } from '@/components/items/LegacyAddItemForm';
-import { getAuthenticatedUserFromRequest } from '@/lib/admin';
 
-export default async function Page() {
-  const user = await getAuthenticatedUserFromRequest();
-
+export default function Page() {
   return (
     <div className="space-y-6">
       <div>
@@ -16,17 +13,7 @@ export default async function Page() {
         </p>
       </div>
 
-      <LegacyAddItemForm
-        initialUser={
-          user
-            ? {
-                ...user,
-                createdAt: user.createdAt.toISOString(),
-                updatedAt: user.updatedAt.toISOString(),
-              }
-            : null
-        }
-      />
+      <LegacyAddItemForm />
     </div>
   );
 }

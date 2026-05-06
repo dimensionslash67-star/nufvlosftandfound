@@ -1,7 +1,6 @@
-import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { ItemForm } from '@/components/items/ItemForm';
-import { getAuthCookieName, verifyJWT } from '@/lib/auth';
+import { getAuthenticatedUserFromRequest } from '@/lib/admin';
 import { getItemById } from '@/lib/items';
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
@@ -12,10 +11,13 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     notFound();
   }
 
-  const cookieStore = await cookies();
-  const token = cookieStore.get(getAuthCookieName())?.value;
-  const session = token ? await verifyJWT(token) : null;
-  const canManage = session?.role === 'ADMIN' || session?.userId === item.reporterId;
+  const currentUser = await getAuthenticatedUserFromRequest();
+
+  if (!currentUser) {
+    redirect('/login');
+  }
+
+  const canManage = currentUser.role === 'ADMIN' || currentUser.id === item.reporterId;
 
   if (!canManage) {
     redirect(`/items/${item.id}`);
@@ -28,7 +30,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         <p className="text-sm text-slate-500">Update the details for this lost and found record.</p>
       </div>
 
-      <ItemForm item={item} mode="edit" />
+      <ItemForm canDelete={canManage} item={item} mode="edit" />
     </div>
   );
 }

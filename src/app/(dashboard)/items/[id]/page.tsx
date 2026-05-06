@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { DeleteItemButton } from '@/components/items/DeleteItemButton';
 import { ItemCard } from '@/components/items/ItemCard';
 import { ItemStatusBadge } from '@/components/items/ItemStatusBadge';
-import { getAuthenticatedUserFromCookies } from '@/lib/admin';
+import { getAuthenticatedUserFromRequest } from '@/lib/admin';
 import { getItemById } from '@/lib/items';
 import { formatDisplayDate, getUserDisplayName } from '@/lib/utils';
 
@@ -15,7 +15,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     notFound();
   }
 
-  const currentUser = await getAuthenticatedUserFromCookies();
+  const currentUser = await getAuthenticatedUserFromRequest();
   const canManage = currentUser?.role === 'ADMIN' || currentUser?.id === item.reporterId;
 
   return (

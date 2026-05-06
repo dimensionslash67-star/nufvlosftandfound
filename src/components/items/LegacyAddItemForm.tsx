@@ -1,8 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
-import { useAuth, type SessionUser } from '@/hooks/useAuth';
+import { useState } from 'react';
 
 const LEGACY_CATEGORY_OPTIONS = [
   'Electronics',
@@ -41,30 +40,11 @@ function addDays(dateValue: string, days: number) {
   return date.toISOString();
 }
 
-function getDisplayName(user: {
-  username: string;
-  firstName?: string | null;
-  lastName?: string | null;
-} | null) {
-  if (!user) {
-    return '';
-  }
-
-  const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
-  return fullName || user.username;
-}
-
 const fieldClassName =
   'w-full rounded-lg border border-slate-200 bg-white px-[14px] py-[10px] text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/15 dark:border-[#334155] dark:bg-[#0f172a] dark:text-[#f1f5f9] dark:[color-scheme:dark]';
 
-export function LegacyAddItemForm({
-  initialUser = null,
-}: {
-  initialUser?: SessionUser | null;
-}) {
+export function LegacyAddItemForm() {
   const router = useRouter();
-  const { user, loading } = useAuth(initialUser);
-  const receivedBy = useMemo(() => getDisplayName(user), [user]);
 
   const [values, setValues] = useState({
     category: '',
@@ -74,6 +54,7 @@ export function LegacyAddItemForm({
     dateReceived: formatToday(),
     retentionDays: '30',
     surrenderedBy: '',
+    receivedBy: '',
     description: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -102,11 +83,7 @@ export function LegacyAddItemForm({
     if (!values.locationSpecific.trim()) nextErrors.locationSpecific = 'Specific place is required.';
     if (!values.dateReceived) nextErrors.dateReceived = 'Date received is required.';
     if (!values.retentionDays) nextErrors.retentionDays = 'Retention period is required.';
-    if (loading) {
-      nextErrors.receivedBy = 'Waiting for logged-in user details.';
-    } else if (!receivedBy) {
-      nextErrors.receivedBy = 'Unable to load the signed-in user details.';
-    }
+    if (!values.receivedBy.trim()) nextErrors.receivedBy = 'Received by is required.';
     if (!values.description.trim()) nextErrors.description = 'Item description is required.';
 
     setErrors(nextErrors);
@@ -125,7 +102,7 @@ export function LegacyAddItemForm({
 
     const contactDetails = [
       values.surrenderedBy.trim() ? `Surrendered By: ${values.surrenderedBy.trim()}` : null,
-      `Received By: ${receivedBy}`,
+      `Received By: ${values.receivedBy.trim()}`,
     ].filter(Boolean);
 
     const response = await fetch('/api/items', {
@@ -252,18 +229,11 @@ export function LegacyAddItemForm({
 
         <Field label="Received By" required error={errors.receivedBy}>
           <input
-            className={`${fieldClassName} cursor-not-allowed opacity-80`}
-            readOnly
-            value={
-              receivedBy ||
-              (loading ? 'Loading logged-in user...' : 'Signed-in user unavailable')
-            }
+            className={fieldClassName}
+            onChange={(event) => setValue('receivedBy', event.target.value)}
+            placeholder="Enter the name of the person who received it"
+            value={values.receivedBy}
           />
-          {receivedBy ? (
-            <p className="mt-2 text-xs font-medium text-emerald-600">
-              Auto-populated with your signed-in account.
-            </p>
-          ) : null}
         </Field>
 
         <Field className="md:col-span-2" label="Item Description" required error={errors.description}>
@@ -284,7 +254,7 @@ export function LegacyAddItemForm({
       <div className="mt-8 flex justify-end">
         <button
           className="inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 md:w-auto"
-          disabled={isSubmitting || loading || !receivedBy}
+          disabled={isSubmitting}
           type="submit"
         >
           {isSubmitting ? 'Adding Item...' : 'Add Item'}

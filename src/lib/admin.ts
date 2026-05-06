@@ -104,13 +104,13 @@ export async function getAuthenticatedUserFromCookies() {
 }
 
 export async function getAuthenticatedUserFromRequest() {
-  const user = await getAuthenticatedUserFromCookies();
+  const headerUser = await getAuthenticatedUserFromHeaders();
 
-  if (user) {
-    return user;
+  if (headerUser) {
+    return headerUser;
   }
 
-  return getAuthenticatedUserFromHeaders();
+  return getAuthenticatedUserFromCookies();
 }
 
 export async function requireAuthenticatedPayload(request: NextRequest) {
