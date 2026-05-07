@@ -2,6 +2,10 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import type {
+  LegacyAddItemInput,
+  LegacyAddItemResult,
+} from '@/app/(dashboard)/items/add/actions';
 
 const LEGACY_CATEGORY_OPTIONS = [
   'Electronics',
@@ -34,16 +38,14 @@ function formatToday() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function addDays(dateValue: string, days: number) {
-  const date = new Date(`${dateValue}T00:00:00`);
-  date.setDate(date.getDate() + days);
-  return date.toISOString();
-}
-
 const fieldClassName =
   'w-full rounded-lg border border-slate-200 bg-white px-[14px] py-[10px] text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/15 dark:border-[#334155] dark:bg-[#0f172a] dark:text-[#f1f5f9] dark:[color-scheme:dark]';
 
-export function LegacyAddItemForm() {
+export function LegacyAddItemForm({
+  submitAction,
+}: {
+  submitAction: (input: LegacyAddItemInput) => Promise<LegacyAddItemResult>;
+}) {
   const router = useRouter();
 
   const [values, setValues] = useState({
@@ -100,39 +102,31 @@ export function LegacyAddItemForm() {
 
     setIsSubmitting(true);
 
-    const contactDetails = [
-      values.surrenderedBy.trim() ? `Surrendered By: ${values.surrenderedBy.trim()}` : null,
-      `Received By: ${values.receivedBy.trim()}`,
-    ].filter(Boolean);
-
-    const response = await fetch('/api/items', {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        itemName: values.itemName.trim(),
-        category: values.category,
-        location: `${values.locationLevel} - ${values.locationSpecific.trim()}`,
-        dateReported: new Date(`${values.dateReceived}T00:00:00`).toISOString(),
-        dueDate: addDays(values.dateReceived, Number(values.retentionDays)),
-        description: values.description.trim(),
-        contactInfo: contactDetails.join(' | '),
-        imageUrl: '',
-      }),
+    const result = await submitAction({
+      category: values.category as LegacyAddItemInput['category'],
+      itemName: values.itemName.trim(),
+      locationLevel: values.locationLevel,
+      locationSpecific: values.locationSpecific.trim(),
+      dateReceived: values.dateReceived,
+      retentionDays: values.retentionDays,
+      surrenderedBy: values.surrenderedBy.trim(),
+      receivedBy: values.receivedBy.trim(),
+      description: values.description.trim(),
     });
 
-    const data = await response.json().catch(() => ({ message: 'Unable to add the item.' }));
-    setIsSubmitting(false);
-
-    if (!response.ok) {
-      setSubmitError(data.message ?? 'Unable to add the item.');
-      window.alert(data.message ?? 'Unable to add the item.');
+    if (!result.success) {
+      setErrors((current) => ({
+        ...current,
+        ...(result.fieldErrors ?? {}),
+      }));
+      setSubmitError(result.message);
+      window.alert(result.message);
+      setIsSubmitting(false);
       return;
     }
 
-    window.alert('Item added successfully.');
+    setIsSubmitting(false);
+    window.alert(result.message);
     router.push('/items');
     router.refresh();
   };
