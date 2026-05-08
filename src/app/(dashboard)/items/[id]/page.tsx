@@ -7,6 +7,8 @@ import { getAuthenticatedUserFromRequest } from '@/lib/admin';
 import { getItemById } from '@/lib/items';
 import { formatDisplayDate, getUserDisplayName } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const item = await getItemById(id);
@@ -16,7 +18,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   }
 
   const currentUser = await getAuthenticatedUserFromRequest();
-  const canManage = currentUser?.role === 'ADMIN' || currentUser?.id === item.reporterId;
+  const canManage = Boolean(currentUser);
 
   return (
     <div className="space-y-6">

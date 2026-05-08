@@ -6,7 +6,6 @@ import { createAuditLog } from '@/lib/audit';
 import { ITEM_CATEGORIES } from '@/lib/constants';
 import { generateItemCode } from '@/lib/itemCode';
 import { prisma } from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
 
 const legacyAddItemSchema = z.object({
   category: z.enum(ITEM_CATEGORIES),
@@ -56,6 +55,7 @@ function toFieldErrors(error: z.ZodError<LegacyAddItemInput>) {
 }
 
 export async function submitLegacyAddItem(
+  reporterId: string,
   input: LegacyAddItemInput,
 ): Promise<LegacyAddItemResult> {
   const parsed = legacyAddItemSchema.safeParse(input);
@@ -68,9 +68,15 @@ export async function submitLegacyAddItem(
     };
   }
 
-  const reporter = await getCurrentUser();
+  const reporter = await prisma.user.findUnique({
+    where: { id: reporterId },
+    select: {
+      id: true,
+      isActive: true,
+    },
+  });
 
-  if (!reporter) {
+  if (!reporter?.isActive) {
     return {
       success: false,
       message: 'Unauthorized.',

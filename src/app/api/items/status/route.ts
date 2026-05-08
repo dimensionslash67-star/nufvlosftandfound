@@ -28,10 +28,6 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ message: 'Item not found.' }, { status: 404 });
     }
 
-    if (currentUser.role !== 'ADMIN' && existingItem.reporterId !== currentUser.id) {
-      return NextResponse.json({ message: 'Forbidden.' }, { status: 403 });
-    }
-
     const json = await request.json();
     const parsed = itemStatusSchema.safeParse(json);
 

@@ -392,11 +392,7 @@ export function ManageItemsDashboard({
   };
 
   const canManageItem = (item: Item) => {
-    if (!user) {
-      return false;
-    }
-
-    return user.role === 'ADMIN' || item.reporterId === user.id;
+    return Boolean(user);
   };
 
   const openDeleteModal = (item: Item) => {

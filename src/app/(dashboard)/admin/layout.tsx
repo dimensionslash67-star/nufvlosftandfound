@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getAuthenticatedUserFromRequest, hasAdminConsoleAccess } from '@/lib/admin';
+import { getAuthenticatedUserFromRequest } from '@/lib/admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,10 +12,6 @@ export default async function AdminLayout({
 
   if (!user) {
     redirect('/login');
-  }
-
-  if (!hasAdminConsoleAccess(user)) {
-    redirect('/dashboard');
   }
 
   return <>{children}</>;

@@ -30,8 +30,8 @@ export type AuthenticatedUser = {
 };
 
 const AUTH_COOKIE_NAME = 'auth-token';
-const AUTH_TOKEN_MAX_AGE = 60 * 60 * 24 * 7;
-const AUTH_TOKEN_MAX_AGE_REMEMBER_ME = 60 * 60 * 24 * 30;
+const AUTH_TOKEN_MAX_AGE = 60 * 60 * 24 * 30;
+const AUTH_TOKEN_MAX_AGE_REMEMBER_ME = 60 * 60 * 24 * 90;
 const authUserSelect = {
   id: true,
   email: true,
@@ -118,7 +118,7 @@ export async function createJWT(payload: {
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(payload.userId)
     .setIssuedAt()
-    .setExpirationTime(payload.rememberMe ? '30d' : '7d')
+    .setExpirationTime(payload.rememberMe ? '90d' : '30d')
     .sign(getJWTSecret());
 }
 

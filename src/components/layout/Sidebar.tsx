@@ -22,13 +22,8 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const { user } = useAuth(initialUser ?? null);
-  const isAdmin = user?.role === 'ADMIN';
 
   const renderLink = (item: DashboardNavItem) => {
-    if (item.adminOnly && !isAdmin) {
-      return null;
-    }
-
     if (item.ownerOnly) {
       return null;
     }

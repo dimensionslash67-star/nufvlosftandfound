@@ -37,57 +37,11 @@ export function useAuth(initialUser: SessionUser | null = null) {
   const contextUser = useContext(AuthSessionContext);
   const resolvedInitialUser = initialUser ?? contextUser ?? null;
   const [user, setUser] = useState<SessionUser | null>(resolvedInitialUser);
-  const [loading, setLoading] = useState(!resolvedInitialUser);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    let active = true;
-
-    if (resolvedInitialUser) {
-      setUser(resolvedInitialUser);
-      setLoading(false);
-
-      return () => {
-        active = false;
-      };
-    }
-
-    const loadSession = async (showLoading = false) => {
-      if (showLoading) {
-        setLoading(true);
-      }
-
-      try {
-        const res = await fetch('/api/auth/session', {
-          cache: 'no-store',
-          credentials: 'same-origin',
-        });
-        const data = await res.json().catch(() => ({ user: null }));
-
-        if (!active) {
-          return;
-        }
-
-        setUser(res.ok && isSessionUser(data.user) ? data.user : null);
-      } catch {
-        if (!active) {
-          return;
-        }
-
-        if (!resolvedInitialUser) {
-          setUser(null);
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void loadSession(!resolvedInitialUser);
-
-    return () => {
-      active = false;
-    };
+    setUser(isSessionUser(resolvedInitialUser) ? resolvedInitialUser : null);
+    setLoading(false);
   }, [resolvedInitialUser]);
 
   return { user, loading };

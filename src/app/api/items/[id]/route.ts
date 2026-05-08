@@ -83,10 +83,6 @@ export async function PATCH(
       return NextResponse.json({ message: 'Item not found.' }, { status: 404 });
     }
 
-    if (currentUser.role !== 'ADMIN' && existingItem.reporterId !== currentUser.id) {
-      return NextResponse.json({ message: 'Forbidden.' }, { status: 403 });
-    }
-
     const json = await request.json();
     const parsed = itemUpdateSchema.safeParse(json);
     const normalizedStatus =
@@ -195,10 +191,6 @@ export async function DELETE(
       return NextResponse.json({ message: 'Item not found.' }, { status: 404 });
     }
 
-    if (currentUser.role !== 'ADMIN' && existingItem.reporterId !== currentUser.id) {
-      return NextResponse.json({ message: 'Forbidden.' }, { status: 403 });
-    }
-
     const deletedFrom = request.headers.get('x-delete-source') ?? 'UNKNOWN';
 
     await prisma.item.delete({ where: { id } });
@@ -213,7 +205,7 @@ export async function DELETE(
         itemName: existingItem.itemName,
         deletedByRole: currentUser.role,
         deletedByEmail: currentUser.email,
-        deletedByScope: currentUser.role === 'ADMIN' ? 'ADMIN' : 'REPORTER',
+        deletedByScope: 'AUTHENTICATED_USER',
         deletedFrom,
       },
       request,

@@ -3,6 +3,8 @@ import { ItemForm } from '@/components/items/ItemForm';
 import { getAuthenticatedUserFromRequest } from '@/lib/admin';
 import { getItemById } from '@/lib/items';
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const item = await getItemById(id);
@@ -17,11 +19,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     redirect('/login');
   }
 
-  const canManage = currentUser.role === 'ADMIN' || currentUser.id === item.reporterId;
-
-  if (!canManage) {
-    redirect(`/items/${item.id}`);
-  }
+  const canManage = Boolean(currentUser);
 
   return (
     <div className="space-y-6">

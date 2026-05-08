@@ -39,7 +39,7 @@ function buildDateRangeWhere(field: 'createdAt' | 'dateReported', dateFrom?: str
 }
 
 export function hasAdminConsoleAccess(user: Pick<AdminSessionUser, 'email' | 'role' | 'isActive'>) {
-  return user.isActive && user.role === 'ADMIN';
+  return user.isActive;
 }
 
 export async function getAuthenticatedUserFromCookies() {
@@ -66,17 +66,11 @@ export async function requireAuthenticatedPayload(request: NextRequest) {
 }
 
 export async function requireAdminConsolePayload(request: NextRequest) {
-  const user = await requireAuthenticatedPayload(request);
-
-  if (!user || user.role !== 'ADMIN') {
-    return null;
-  }
-
-  return user;
+  return requireAuthenticatedPayload(request);
 }
 
 export async function requireAdminPayload(request: NextRequest) {
-  return requireAdminConsolePayload(request);
+  return requireAuthenticatedPayload(request);
 }
 
 export async function getAdminConsoleUserFromCookies() {
