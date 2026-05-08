@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuditLog } from '@/lib/audit';
-import { getAuthPayloadFromRequest } from '@/lib/auth';
+import { getAuthenticatedUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { itemStatusSchema } from '@/lib/validations';
 
 export async function PATCH(request: NextRequest) {
   try {
-    const payload = await getAuthPayloadFromRequest(request);
+    const currentUser = await getAuthenticatedUserFromRequest(request);
 
-    if (!payload?.userId) {
+    if (!currentUser) {
       return NextResponse.json({ message: 'Unauthorized.' }, { status: 401 });
     }
 
@@ -28,7 +28,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ message: 'Item not found.' }, { status: 404 });
     }
 
-    if (payload.role !== 'ADMIN' && existingItem.reporterId !== payload.userId) {
+    if (currentUser.role !== 'ADMIN' && existingItem.reporterId !== currentUser.id) {
       return NextResponse.json({ message: 'Forbidden.' }, { status: 403 });
     }
 
@@ -47,7 +47,7 @@ export async function PATCH(request: NextRequest) {
 
     const now = new Date();
     const status = parsed.data.status;
-    const claimerId = status === 'CLAIMED' ? parsed.data.claimerId ?? payload.userId : null;
+    const claimerId = status === 'CLAIMED' ? parsed.data.claimerId ?? currentUser.id : null;
     const claimedAt = status === 'CLAIMED' ? now : null;
     const disposalDate = status === 'DISPOSED' ? now : null;
 
@@ -76,7 +76,7 @@ export async function PATCH(request: NextRequest) {
     });
 
     await createAuditLog({
-      userId: payload.userId,
+      userId: currentUser.id,
       action: 'ITEM_STATUS_UPDATED',
       entityType: 'ITEM',
       entityId: itemId,

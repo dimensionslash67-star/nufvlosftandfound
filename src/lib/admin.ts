@@ -1,8 +1,12 @@
-import { cookies, headers } from 'next/headers';
 import { Prisma } from '@prisma/client';
 import { eachDayOfInterval, format, startOfDay, subDays } from 'date-fns';
 import type { NextRequest } from 'next/server';
-import { getAuthCookieName, getAuthPayloadFromRequest, verifyJWT } from './auth';
+import {
+  getAuthPayloadFromRequest,
+  getAuthenticatedUserFromRequest as getRequestUser,
+  getCurrentUser,
+  type AuthenticatedUser,
+} from './auth';
 import { ITEMS_PER_PAGE, ITEM_STATUS_LABELS } from './constants';
 import { prisma } from './prisma';
 import { formatDisplayDate, getUserDisplayName } from './utils';
@@ -14,17 +18,7 @@ const SETTING_KEYS = {
   adminEmail: 'admin_email',
 } as const;
 
-type AdminSessionUser = {
-  id: string;
-  username: string;
-  email: string;
-  firstName?: string | null;
-  lastName?: string | null;
-  role: 'ADMIN' | 'USER';
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-};
+type AdminSessionUser = AuthenticatedUser;
 
 function buildDateRangeWhere(field: 'createdAt' | 'dateReported', dateFrom?: string, dateTo?: string) {
   if (!dateFrom && !dateTo) {
@@ -48,88 +42,16 @@ export function hasAdminConsoleAccess(user: Pick<AdminSessionUser, 'email' | 'ro
   return user.isActive && user.role === 'ADMIN';
 }
 
-async function getAuthenticatedUserFromHeaders(): Promise<AdminSessionUser | null> {
-  const requestHeaders = await headers();
-  const id = requestHeaders.get('x-user-id');
-  const email = requestHeaders.get('x-user-email');
-  const username = requestHeaders.get('x-user-username');
-  const role = requestHeaders.get('x-user-role');
-
-  if (!id || !email || !username || (role !== 'ADMIN' && role !== 'USER')) {
-    return null;
-  }
-
-  return {
-    id,
-    email,
-    username,
-    firstName: null,
-    lastName: null,
-    role,
-    isActive: true,
-    createdAt: new Date(0),
-    updatedAt: new Date(0),
-  };
-}
-
 export async function getAuthenticatedUserFromCookies() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(getAuthCookieName())?.value;
-  const payload = token ? await verifyJWT(token) : null;
-
-  if (!payload?.userId) {
-    return null;
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: payload.userId },
-    select: {
-      id: true,
-      username: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      role: true,
-      isActive: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
-
-  if (!user?.isActive) {
-    return null;
-  }
-
-  return user;
+  return getCurrentUser();
 }
 
 export async function getAuthenticatedUserFromRequest() {
-  const headerUser = await getAuthenticatedUserFromHeaders();
-
-  if (headerUser) {
-    return headerUser;
-  }
-
-  return getAuthenticatedUserFromCookies();
+  return getCurrentUser();
 }
 
 export async function requireAuthenticatedPayload(request: NextRequest) {
-  const payload = await getAuthPayloadFromRequest(request);
-
-  if (!payload?.userId) {
-    return null;
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: payload.userId },
-    select: {
-      id: true,
-      email: true,
-      username: true,
-      role: true,
-      isActive: true,
-    },
-  });
+  const user = await getRequestUser(request);
 
   if (!user?.isActive) {
     return null;

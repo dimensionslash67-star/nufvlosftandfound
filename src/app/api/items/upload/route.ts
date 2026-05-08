@@ -1,14 +1,14 @@
 import { put } from '@vercel/blob';
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuditLog } from '@/lib/audit';
-import { getAuthPayloadFromRequest } from '@/lib/auth';
+import { getAuthenticatedUserFromRequest } from '@/lib/auth';
 import { sanitizeFileName, uploadConfig } from '@/lib/upload';
 
 export async function POST(request: NextRequest) {
   try {
-    const payload = await getAuthPayloadFromRequest(request);
+    const currentUser = await getAuthenticatedUserFromRequest(request);
 
-    if (!payload?.userId) {
+    if (!currentUser) {
       return NextResponse.json({ message: 'Unauthorized.' }, { status: 401 });
     }
 
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     });
 
     await createAuditLog({
-      userId: payload.userId,
+      userId: currentUser.id,
       action: 'ITEM_IMAGE_UPLOADED',
       entityType: 'ITEM',
       details: { fileName: file.name, url: blob.url },

@@ -1,36 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getAuthCookieName, getCurrentUser, getExpiredAuthCookieOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function GET() {
   try {
-    const payload = await getCurrentUser();
+    const user = await getCurrentUser();
 
-    if (!payload?.userId) {
-      const response = NextResponse.json({ user: null }, { status: 401 });
-      response.cookies.set(getAuthCookieName(), '', getExpiredAuthCookieOptions());
-      return response;
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-
-    if (!user || !user.isActive) {
-      const response = NextResponse.json({ user: null }, { status: 401 });
-      response.cookies.set(getAuthCookieName(), '', getExpiredAuthCookieOptions());
-      return response;
+    if (!user) {
+      return NextResponse.json({ user: null }, { status: 401 });
     }
 
     return NextResponse.json({ user });

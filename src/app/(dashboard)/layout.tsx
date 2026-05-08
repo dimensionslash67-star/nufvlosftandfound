@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { DashboardLayout as SharedDashboardLayout } from '@/components/layout/DashboardLayout';
 import { getAuthenticatedUserFromRequest } from '@/lib/admin';
 import type { SessionUser } from '@/hooks/useAuth';
@@ -9,18 +10,18 @@ export default async function DashboardLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const currentUser = await getAuthenticatedUserFromRequest();
+
+  if (!currentUser) {
+    redirect('/login');
+  }
+
   const resolveInitialUser = async (): Promise<SessionUser | null> => {
-    const user = await getAuthenticatedUserFromRequest();
-
-    if (user) {
-      return {
-        ...user,
-        createdAt: user.createdAt.toISOString(),
-        updatedAt: user.updatedAt.toISOString(),
-      };
-    }
-
-    return null;
+    return {
+      ...currentUser,
+      createdAt: currentUser.createdAt.toISOString(),
+      updatedAt: currentUser.updatedAt.toISOString(),
+    };
   };
 
   return <SharedDashboardLayout initialUser={await resolveInitialUser()}>{children}</SharedDashboardLayout>;

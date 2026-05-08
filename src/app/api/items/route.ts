@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuditLog } from '@/lib/audit';
-import { getAuthPayloadFromRequest } from '@/lib/auth';
+import { getAuthPayloadFromRequest, getAuthenticatedUserFromRequest } from '@/lib/auth';
 import { ITEMS_PER_PAGE } from '@/lib/constants';
 import { generateItemCode } from '@/lib/itemCode';
 import { prisma } from '@/lib/prisma';
@@ -190,9 +190,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const payload = await getAuthPayloadFromRequest(request);
+    const currentUser = await getAuthenticatedUserFromRequest(request);
 
-    if (!payload?.userId) {
+    if (!currentUser) {
       return NextResponse.json({ message: 'Unauthorized.' }, { status: 401 });
     }
 
@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
             dueDate,
             contactInfo: normalizeOptionalString(parsed.data.contactInfo),
             imageUrl: normalizeOptionalString(parsed.data.imageUrl),
-            reporterId: payload.userId,
+            reporterId: currentUser.id,
           },
           include: {
             reporter: {
@@ -268,7 +268,7 @@ export async function POST(request: NextRequest) {
     }
 
     await createAuditLog({
-      userId: payload.userId,
+      userId: currentUser.id,
       action: 'ITEM_CREATED',
       entityType: 'ITEM',
       entityId: item.id,

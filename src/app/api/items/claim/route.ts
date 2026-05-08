@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAuditLog } from '@/lib/audit';
-import { getAuthPayloadFromRequest } from '@/lib/auth';
+import { getAuthenticatedUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 const claimSchema = z.object({
@@ -18,9 +18,9 @@ const claimSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const payload = await getAuthPayloadFromRequest(request);
+    const currentUser = await getAuthenticatedUserFromRequest(request);
 
-    if (!payload?.userId) {
+    if (!currentUser) {
       return NextResponse.json({ message: 'Unauthorized.' }, { status: 401 });
     }
 
@@ -53,13 +53,13 @@ export async function POST(request: NextRequest) {
       where: { id: parsed.data.itemId },
       data: {
         status: 'CLAIMED',
-        claimerId: payload.userId,
+        claimerId: currentUser.id,
         claimedAt: new Date(),
       },
     });
 
     await createAuditLog({
-      userId: payload.userId,
+      userId: currentUser.id,
       action: 'ITEM_CLAIMED',
       entityType: 'ITEM',
       entityId: item.id,

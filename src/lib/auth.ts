@@ -1,7 +1,8 @@
 import bcrypt from 'bcryptjs';
 import { jwtVerify, SignJWT, type JWTPayload } from 'jose';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import type { NextRequest } from 'next/server';
+import { prisma } from './prisma';
 
 export type AuthJWTPayload = JWTPayload & {
   userId: string;
@@ -16,9 +17,32 @@ export type OwnerPinJWTPayload = JWTPayload & {
   userId: string;
 };
 
+export type AuthenticatedUser = {
+  id: string;
+  email: string;
+  username: string;
+  firstName: string | null;
+  lastName: string | null;
+  role: 'ADMIN' | 'USER';
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 const AUTH_COOKIE_NAME = 'auth-token';
 const AUTH_TOKEN_MAX_AGE = 60 * 60 * 24 * 7;
 const AUTH_TOKEN_MAX_AGE_REMEMBER_ME = 60 * 60 * 24 * 30;
+const authUserSelect = {
+  id: true,
+  email: true,
+  username: true,
+  firstName: true,
+  lastName: true,
+  role: true,
+  isActive: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
 
 function getJWTSecret() {
   const secret = process.env.JWT_SECRET;
@@ -127,7 +151,12 @@ export async function verifyJWT(token: string): Promise<AuthJWTPayload | null> {
 
     return verifiedPayload as AuthJWTPayload;
   } catch (error) {
-    console.error('JWT verification failed:', error);
+    if (
+      !(error instanceof Error && 'code' in error && error.code === 'ERR_JWT_EXPIRED')
+    ) {
+      console.error('JWT verification failed:', error);
+    }
+
     return null;
   }
 }
@@ -190,7 +219,7 @@ export async function getAuthPayloadFromRequest(request: NextRequest) {
   return verifyJWT(token);
 }
 
-export async function getCurrentUser() {
+export async function getCurrentUserPayload() {
   const cookieStore = await cookies();
   const token = cookieStore.get(getAuthCookieName())?.value;
 
@@ -199,4 +228,48 @@ export async function getCurrentUser() {
   }
 
   return verifyJWT(token);
+}
+
+async function getAuthenticatedUserById(userId: string): Promise<AuthenticatedUser | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: authUserSelect,
+  });
+
+  if (!user?.isActive) {
+    return null;
+  }
+
+  return user;
+}
+
+export async function getCurrentUser() {
+  const requestHeaders = await headers();
+  const headerUserId = requestHeaders.get('x-user-id');
+
+  if (headerUserId) {
+    const headerUser = await getAuthenticatedUserById(headerUserId);
+
+    if (headerUser) {
+      return headerUser;
+    }
+  }
+
+  const payload = await getCurrentUserPayload();
+
+  if (!payload?.userId) {
+    return null;
+  }
+
+  return getAuthenticatedUserById(payload.userId);
+}
+
+export async function getAuthenticatedUserFromRequest(request: NextRequest) {
+  const payload = await getAuthPayloadFromRequest(request);
+
+  if (!payload?.userId) {
+    return null;
+  }
+
+  return getAuthenticatedUserById(payload.userId);
 }

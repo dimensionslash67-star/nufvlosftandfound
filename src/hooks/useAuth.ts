@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { createContext, createElement, useContext, useEffect, useState } from 'react';
 
 export type SessionUser = {
   id: string;
@@ -13,6 +13,8 @@ export type SessionUser = {
   createdAt: string;
   updatedAt: string;
 };
+
+const AuthSessionContext = createContext<SessionUser | null | undefined>(undefined);
 
 function isSessionUser(value: unknown): value is SessionUser {
   if (!value || typeof value !== 'object') {
@@ -32,14 +34,16 @@ function isSessionUser(value: unknown): value is SessionUser {
 }
 
 export function useAuth(initialUser: SessionUser | null = null) {
-  const [user, setUser] = useState<SessionUser | null>(initialUser);
-  const [loading, setLoading] = useState(!initialUser);
+  const contextUser = useContext(AuthSessionContext);
+  const resolvedInitialUser = initialUser ?? contextUser ?? null;
+  const [user, setUser] = useState<SessionUser | null>(resolvedInitialUser);
+  const [loading, setLoading] = useState(!resolvedInitialUser);
 
   useEffect(() => {
     let active = true;
 
-    if (initialUser) {
-      setUser(initialUser);
+    if (resolvedInitialUser) {
+      setUser(resolvedInitialUser);
       setLoading(false);
 
       return () => {
@@ -69,7 +73,7 @@ export function useAuth(initialUser: SessionUser | null = null) {
           return;
         }
 
-        if (!initialUser) {
+        if (!resolvedInitialUser) {
           setUser(null);
         }
       } finally {
@@ -79,12 +83,26 @@ export function useAuth(initialUser: SessionUser | null = null) {
       }
     };
 
-    void loadSession(!initialUser);
+    void loadSession(!resolvedInitialUser);
 
     return () => {
       active = false;
     };
-  }, [initialUser]);
+  }, [resolvedInitialUser]);
 
   return { user, loading };
+}
+
+export function AuthSessionProvider({
+  children,
+  initialUser,
+}: {
+  children: React.ReactNode;
+  initialUser?: SessionUser | null;
+}) {
+  return createElement(
+    AuthSessionContext.Provider,
+    { value: initialUser ?? null },
+    children,
+  );
 }

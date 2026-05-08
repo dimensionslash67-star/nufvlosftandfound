@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuditLog } from '@/lib/audit';
-import { getAuthPayloadFromRequest } from '@/lib/auth';
+import { getAuthenticatedUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { itemUpdateSchema } from '@/lib/validations';
 
@@ -45,18 +45,6 @@ async function getExistingItem(id: string) {
   });
 }
 
-async function getCurrentUserFromPayload(userId: string) {
-  return prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-      isActive: true,
-    },
-  });
-}
-
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -79,15 +67,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const payload = await getAuthPayloadFromRequest(request);
+    const currentUser = await getAuthenticatedUserFromRequest(request);
 
-    if (!payload?.userId) {
-      return NextResponse.json({ message: 'Unauthorized.' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUserFromPayload(payload.userId);
-
-    if (!currentUser?.isActive) {
+    if (!currentUser) {
       return NextResponse.json({ message: 'Unauthorized.' }, { status: 401 });
     }
 
@@ -173,7 +155,7 @@ export async function PATCH(
     });
 
     await createAuditLog({
-      userId: payload.userId,
+      userId: currentUser.id,
       action: shouldDispose ? 'ITEM_DISPOSED' : 'ITEM_UPDATED',
       entityType: 'ITEM',
       entityId: item.id,
@@ -197,15 +179,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const payload = await getAuthPayloadFromRequest(request);
+    const currentUser = await getAuthenticatedUserFromRequest(request);
 
-    if (!payload?.userId) {
-      return NextResponse.json({ message: 'Unauthorized.' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUserFromPayload(payload.userId);
-
-    if (!currentUser?.isActive) {
+    if (!currentUser) {
       return NextResponse.json({ message: 'Unauthorized.' }, { status: 401 });
     }
 
@@ -228,7 +204,7 @@ export async function DELETE(
     await prisma.item.delete({ where: { id } });
 
     await createAuditLog({
-      userId: payload.userId,
+      userId: currentUser.id,
       action: 'ITEM_DELETED',
       entityType: 'ITEM',
       entityId: id,

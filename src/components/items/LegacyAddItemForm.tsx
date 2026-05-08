@@ -101,34 +101,40 @@ export function LegacyAddItemForm({
     }
 
     setIsSubmitting(true);
+    try {
+      const result = await submitAction({
+        category: values.category as LegacyAddItemInput['category'],
+        itemName: values.itemName.trim(),
+        locationLevel: values.locationLevel,
+        locationSpecific: values.locationSpecific.trim(),
+        dateReceived: values.dateReceived,
+        retentionDays: values.retentionDays,
+        surrenderedBy: values.surrenderedBy.trim(),
+        receivedBy: values.receivedBy.trim(),
+        description: values.description.trim(),
+      });
 
-    const result = await submitAction({
-      category: values.category as LegacyAddItemInput['category'],
-      itemName: values.itemName.trim(),
-      locationLevel: values.locationLevel,
-      locationSpecific: values.locationSpecific.trim(),
-      dateReceived: values.dateReceived,
-      retentionDays: values.retentionDays,
-      surrenderedBy: values.surrenderedBy.trim(),
-      receivedBy: values.receivedBy.trim(),
-      description: values.description.trim(),
-    });
+      if (!result.success) {
+        setErrors((current) => ({
+          ...current,
+          ...(result.fieldErrors ?? {}),
+        }));
+        setSubmitError(result.message);
+        window.alert(result.message);
+        return;
+      }
 
-    if (!result.success) {
-      setErrors((current) => ({
-        ...current,
-        ...(result.fieldErrors ?? {}),
-      }));
-      setSubmitError(result.message);
       window.alert(result.message);
+      router.push('/items');
+      router.refresh();
+    } catch (error) {
+      console.error('Legacy add item submit error:', error);
+      const message = 'Unable to add the item.';
+      setSubmitError(message);
+      window.alert(message);
+    } finally {
       setIsSubmitting(false);
-      return;
     }
-
-    setIsSubmitting(false);
-    window.alert(result.message);
-    router.push('/items');
-    router.refresh();
   };
 
   return (

@@ -1,16 +1,14 @@
 import { redirect } from 'next/navigation';
 import { LegacyAddItemForm } from '@/components/items/LegacyAddItemForm';
-import { getAuthenticatedUserFromRequest } from '@/lib/admin';
+import { getCurrentUser } from '@/lib/auth';
 import { submitLegacyAddItem } from './actions';
 
 export default async function Page() {
-  const currentUser = await getAuthenticatedUserFromRequest();
+  const currentUser = await getCurrentUser();
 
-  if (!currentUser?.id) {
+  if (!currentUser) {
     redirect('/login');
   }
-
-  const submitAction = submitLegacyAddItem.bind(null, currentUser.id);
 
   return (
     <div className="space-y-6">
@@ -24,7 +22,7 @@ export default async function Page() {
         </p>
       </div>
 
-      <LegacyAddItemForm submitAction={submitAction} />
+      <LegacyAddItemForm submitAction={submitLegacyAddItem} />
     </div>
   );
 }

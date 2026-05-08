@@ -3,14 +3,12 @@ import type { NextRequest } from 'next/server';
 import { getAuthCookieName, verifyJWT } from '@/lib/auth';
 
 const protectedRoutes = ['/dashboard', '/items', '/search', '/admin', '/owner', '/settings'];
-const authContextApiRoutes = ['/api/items', '/api/admin', '/api/owner', '/api/auth/session'];
 const publicAuthRoutes = ['/login', '/register'];
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isPublicAuthRoute = publicAuthRoutes.includes(pathname);
   const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
-  const isAuthContextApiRoute = authContextApiRoutes.some((route) => pathname.startsWith(route));
 
   const token = request.cookies.get(getAuthCookieName())?.value;
 
@@ -30,15 +28,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  if (!isProtectedRoute && !isAuthContextApiRoute) {
+  if (!isProtectedRoute) {
     return NextResponse.next();
   }
 
   if (!token) {
-    if (isAuthContextApiRoute) {
-      return NextResponse.next();
-    }
-
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
@@ -49,12 +43,6 @@ export async function middleware(request: NextRequest) {
 
     if (!payload?.userId || !payload.email || !payload.role || !payload.username) {
       console.error('Invalid token payload:', payload);
-
-      if (isAuthContextApiRoute) {
-        const response = NextResponse.next();
-        response.cookies.delete(getAuthCookieName());
-        return response;
-      }
 
       const response = NextResponse.redirect(new URL('/login', request.url));
       response.cookies.delete(getAuthCookieName());
@@ -75,12 +63,6 @@ export async function middleware(request: NextRequest) {
   } catch (error) {
     console.error('Token verification error:', error);
 
-    if (isAuthContextApiRoute) {
-      const response = NextResponse.next();
-      response.cookies.delete(getAuthCookieName());
-      return response;
-    }
-
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     loginUrl.searchParams.set('session_expired', 'true');
@@ -100,9 +82,5 @@ export const config = {
     '/admin/:path*',
     '/owner/:path*',
     '/settings/:path*',
-    '/api/items/:path*',
-    '/api/admin/:path*',
-    '/api/owner/:path*',
-    '/api/auth/session',
   ],
 };
