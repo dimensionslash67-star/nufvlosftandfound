@@ -12,6 +12,7 @@ import { DisposeItemModal } from '@/components/items/DisposeItemModal';
 import { ItemDetailModal } from '@/components/items/ItemDetailModal';
 import { ItemStatusBadge } from '@/components/items/ItemStatusBadge';
 import { Toast } from '@/components/ui/Toast';
+import type { SessionUser } from '@/hooks/useAuth';
 
 type FilterState = {
   search: string;
@@ -202,12 +203,16 @@ function PlusIcon() {
   );
 }
 
-export function ManageItemsDashboard() {
+export function ManageItemsDashboard({
+  initialUser,
+}: {
+  initialUser?: SessionUser | null;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const searchParamsString = searchParams.toString();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth(initialUser ?? null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [filters, setFilters] = useState<FilterState>(() => getInitialState(searchParams));
   const debouncedFilters = useDebounce(filters, 300);
