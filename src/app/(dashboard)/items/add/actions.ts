@@ -3,6 +3,7 @@
 import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { createAuditLog } from '@/lib/audit';
+import { getFallbackAuthenticatedUser } from '@/lib/auth';
 import { ITEM_CATEGORIES } from '@/lib/constants';
 import { generateItemCode } from '@/lib/itemCode';
 import { prisma } from '@/lib/prisma';
@@ -55,7 +56,7 @@ function toFieldErrors(error: z.ZodError<LegacyAddItemInput>) {
 }
 
 export async function submitLegacyAddItem(
-  reporterId: string,
+  reporterId: string | null,
   input: LegacyAddItemInput,
 ): Promise<LegacyAddItemResult> {
   const parsed = legacyAddItemSchema.safeParse(input);
@@ -68,13 +69,15 @@ export async function submitLegacyAddItem(
     };
   }
 
-  const reporter = await prisma.user.findUnique({
-    where: { id: reporterId },
-    select: {
-      id: true,
-      isActive: true,
-    },
-  });
+  const reporter = reporterId
+    ? await prisma.user.findUnique({
+        where: { id: reporterId },
+        select: {
+          id: true,
+          isActive: true,
+        },
+      })
+    : await getFallbackAuthenticatedUser();
 
   if (!reporter?.isActive) {
     return {

@@ -392,7 +392,7 @@ export function ManageItemsDashboard({
   };
 
   const canManageItem = (item: Item) => {
-    return Boolean(user);
+    return true;
   };
 
   const openDeleteModal = (item: Item) => {

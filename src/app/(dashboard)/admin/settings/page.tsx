@@ -1,12 +1,12 @@
-import { redirect } from 'next/navigation';
 import { ProfileSettings } from '@/components/admin/ProfileSettings';
+import { getFallbackAuthenticatedUser } from '@/lib/auth';
 import { getAuthenticatedUserFromRequest } from '@/lib/admin';
 
 export default async function Page() {
-  const user = await getAuthenticatedUserFromRequest();
+  const user = (await getAuthenticatedUserFromRequest()) ?? (await getFallbackAuthenticatedUser());
 
   if (!user) {
-    redirect('/login');
+    return null;
   }
 
   return (

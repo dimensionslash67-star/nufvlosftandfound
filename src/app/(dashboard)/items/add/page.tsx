@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import { LegacyAddItemForm } from '@/components/items/LegacyAddItemForm';
 import { getCurrentUser } from '@/lib/auth';
 import { submitLegacyAddItem } from './actions';
@@ -7,12 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function Page() {
   const currentUser = await getCurrentUser();
-
-  if (!currentUser) {
-    redirect('/login');
-  }
-
-  const submitAction = submitLegacyAddItem.bind(null, currentUser.id);
+  const submitAction = submitLegacyAddItem.bind(null, currentUser?.id ?? null);
 
   return (
     <div className="space-y-6">

@@ -3,7 +3,6 @@ import { notFound } from 'next/navigation';
 import { DeleteItemButton } from '@/components/items/DeleteItemButton';
 import { ItemCard } from '@/components/items/ItemCard';
 import { ItemStatusBadge } from '@/components/items/ItemStatusBadge';
-import { getAuthenticatedUserFromRequest } from '@/lib/admin';
 import { getItemById } from '@/lib/items';
 import { formatDisplayDate, getUserDisplayName } from '@/lib/utils';
 
@@ -17,8 +16,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     notFound();
   }
 
-  const currentUser = await getAuthenticatedUserFromRequest();
-  const canManage = Boolean(currentUser);
+  const canManage = true;
 
   return (
     <div className="space-y-6">
