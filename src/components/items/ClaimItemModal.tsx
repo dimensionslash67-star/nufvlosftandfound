@@ -63,6 +63,7 @@ export function ClaimItemModal({
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           itemId: item.id,
           claimData: formData,

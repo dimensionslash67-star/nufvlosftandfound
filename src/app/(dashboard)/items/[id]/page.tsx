@@ -4,7 +4,7 @@ import { DeleteItemButton } from '@/components/items/DeleteItemButton';
 import { ItemCard } from '@/components/items/ItemCard';
 import { ItemStatusBadge } from '@/components/items/ItemStatusBadge';
 import { getItemById } from '@/lib/items';
-import { formatDisplayDate, getUserDisplayName } from '@/lib/utils';
+import { formatDisplayDate, getStoredClaimerName, getUserDisplayName } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -123,16 +123,80 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                   {formatDisplayDate(item.updatedAt)}
                 </dd>
               </div>
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                  Claimer
-                </dt>
-                <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
-                  {item.claimer ? getUserDisplayName(item.claimer) : 'Unclaimed'}
-                </dd>
-              </div>
             </dl>
           </section>
+
+          {item.status === 'CLAIMED' ? (
+            <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)] dark:border-[#334155] dark:bg-[#1e293b]">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-[#f1f5f9]">
+                Claim Details
+              </h2>
+              <dl className="mt-5 grid gap-4 text-sm text-slate-700 dark:text-slate-300 sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    Claimer
+                  </dt>
+                  <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
+                    {getStoredClaimerName(item)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    Claimed At
+                  </dt>
+                  <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
+                    {formatDisplayDate(item.claimedAt, 'MMM d, yyyy h:mm a')}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    Email
+                  </dt>
+                  <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
+                    {item.claimerEmail || 'N/A'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    ID Number
+                  </dt>
+                  <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
+                    {item.claimerIdNumber || 'N/A'}
+                  </dd>
+                </div>
+                {item.claimerPhone ? (
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                      Contact Number
+                    </dt>
+                    <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
+                      {item.claimerPhone}
+                    </dd>
+                  </div>
+                ) : null}
+                {item.relationshipToItem ? (
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                      Relationship To Item
+                    </dt>
+                    <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
+                      {item.relationshipToItem}
+                    </dd>
+                  </div>
+                ) : null}
+                {item.verificationNotes ? (
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                      Verification Notes
+                    </dt>
+                    <dd className="mt-1 whitespace-pre-wrap text-slate-900 dark:text-[#f1f5f9]">
+                      {item.verificationNotes}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            </section>
+          ) : null}
         </div>
       </div>
     </div>

@@ -21,7 +21,13 @@ export async function PATCH(request: NextRequest) {
 
     const existingItem = await prisma.item.findUnique({
       where: { id: itemId },
-      select: { id: true, reporterId: true, status: true },
+      select: {
+        id: true,
+        reporterId: true,
+        status: true,
+        claimerId: true,
+        claimedAt: true,
+      },
     });
 
     if (!existingItem) {
@@ -43,8 +49,8 @@ export async function PATCH(request: NextRequest) {
 
     const now = new Date();
     const status = parsed.data.status;
-    const claimerId = status === 'CLAIMED' ? parsed.data.claimerId ?? currentUser.id : null;
-    const claimedAt = status === 'CLAIMED' ? now : null;
+    const claimerId = status === 'CLAIMED' ? parsed.data.claimerId ?? existingItem.claimerId ?? null : null;
+    const claimedAt = status === 'CLAIMED' ? existingItem.claimedAt ?? now : null;
     const disposalDate = status === 'DISPOSED' ? now : null;
 
     const item = await prisma.item.update({
@@ -53,6 +59,12 @@ export async function PATCH(request: NextRequest) {
         status,
         claimerId,
         claimedAt,
+        claimerName: status === 'CLAIMED' ? undefined : null,
+        claimerEmail: status === 'CLAIMED' ? undefined : null,
+        claimerPhone: status === 'CLAIMED' ? undefined : null,
+        claimerIdNumber: status === 'CLAIMED' ? undefined : null,
+        relationshipToItem: status === 'CLAIMED' ? undefined : null,
+        verificationNotes: status === 'CLAIMED' ? undefined : null,
         isDisposed: status === 'DISPOSED',
         disposalDate,
         isFlagged: parsed.data.isFlagged,

@@ -36,3 +36,8 @@ export function getUserDisplayName(user?: {
   const name = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
   return name || user?.username || 'Staff User';
 }
+
+export function getStoredClaimerName(item?: { claimerName?: string | null }) {
+  const name = item?.claimerName?.trim();
+  return name || 'Claim details missing';
+}

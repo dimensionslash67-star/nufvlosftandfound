@@ -25,6 +25,12 @@ export interface Item {
   reporter?: ItemUserSummary;
   claimerId?: string | null;
   claimer?: ItemUserSummary | null;
+  claimerName?: string | null;
+  claimerEmail?: string | null;
+  claimerIdNumber?: string | null;
+  claimerPhone?: string | null;
+  relationshipToItem?: string | null;
+  verificationNotes?: string | null;
   claimedAt?: string | Date | null;
   disposalDate?: string | Date | null;
   isDisposed?: boolean;

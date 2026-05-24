@@ -51,6 +51,12 @@ model Item {
 
   claimerId       String?     @map("claimer_id")
   claimer         User?       @relation("Claimer", fields: [claimerId], references: [id])
+  claimerName     String?     @map("claimer_name")
+  claimerEmail    String?     @map("claimer_email")
+  claimerIdNumber String?     @map("claimer_id_number")
+  claimerPhone    String?     @map("claimer_phone")
+  relationshipToItem String?  @map("relationship_to_item")
+  verificationNotes String?   @map("verification_notes")
   claimedAt       DateTime?   @map("claimed_at")
 
   disposalDate    DateTime?   @map("disposal_date")

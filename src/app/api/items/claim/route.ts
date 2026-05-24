@@ -4,6 +4,11 @@ import { createAuditLog } from '@/lib/audit';
 import { getAuthenticatedUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+function normalizeOptionalString(value?: string) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
 const claimSchema = z.object({
   itemId: z.string().min(1),
   claimData: z.object({
@@ -53,7 +58,13 @@ export async function POST(request: NextRequest) {
       where: { id: parsed.data.itemId },
       data: {
         status: 'CLAIMED',
-        claimerId: currentUser.id,
+        claimerId: null,
+        claimerName: parsed.data.claimData.claimerName.trim(),
+        claimerEmail: parsed.data.claimData.claimerEmail.trim(),
+        claimerPhone: normalizeOptionalString(parsed.data.claimData.claimerPhone),
+        claimerIdNumber: parsed.data.claimData.claimerIdNumber.trim(),
+        relationshipToItem: normalizeOptionalString(parsed.data.claimData.relationshipToItem),
+        verificationNotes: normalizeOptionalString(parsed.data.claimData.verificationNotes),
         claimedAt: new Date(),
       },
     });

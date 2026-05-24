@@ -427,13 +427,7 @@ export async function getReportPreviewData({
           category: true,
           location: true,
           claimedAt: true,
-          claimer: {
-            select: {
-              username: true,
-              firstName: true,
-              lastName: true,
-            },
-          },
+          claimerName: true,
         },
       }),
       prisma.item.count({ where }),
@@ -446,7 +440,7 @@ export async function getReportPreviewData({
         'Item Name': row.itemName,
         Category: row.category,
         Location: row.location,
-        Claimer: getUserDisplayName(row.claimer ?? undefined),
+        Claimer: row.claimerName?.trim() || 'Claim details missing',
         'Claimed At': row.claimedAt ? formatDisplayDate(row.claimedAt, 'MMM d, yyyy h:mm a') : '—',
       })),
       columns: ['Item Code', 'Item Name', 'Category', 'Location', 'Claimer', 'Claimed At'],
