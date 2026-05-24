@@ -26,9 +26,7 @@ export interface Item {
   claimerId?: string | null;
   claimer?: ItemUserSummary | null;
   claimerName?: string | null;
-  claimerEmail?: string | null;
   claimerIdNumber?: string | null;
-  claimerPhone?: string | null;
   relationshipToItem?: string | null;
   verificationNotes?: string | null;
   claimedAt?: string | Date | null;

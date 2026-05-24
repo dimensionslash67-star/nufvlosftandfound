@@ -69,12 +69,7 @@ export default async function Page({
                   <td className="px-5 py-4">{item.itemName}</td>
                   <td className="px-5 py-4">{item.category}</td>
                   <td className="px-5 py-4">
-                    <div className="font-medium text-slate-900 dark:text-[#f1f5f9]">
-                      {getStoredClaimerName(item)}
-                    </div>
-                    {item.claimerEmail ? (
-                      <div className="text-xs text-slate-500 dark:text-slate-400">{item.claimerEmail}</div>
-                    ) : null}
+                    <div className="font-medium text-slate-900 dark:text-[#f1f5f9]">{getStoredClaimerName(item)}</div>
                   </td>
                   <td className="px-5 py-4">{formatDisplayDate(item.claimedAt, 'MMM d, yyyy h:mm a')}</td>
                   <td className="px-5 py-4">

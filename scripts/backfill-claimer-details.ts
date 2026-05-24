@@ -60,9 +60,7 @@ async function main() {
 
     const nextData = {
       claimerName: readString(claimerInfo.claimerName),
-      claimerEmail: readString(claimerInfo.claimerEmail),
-      claimerIdNumber: readString(claimerInfo.claimerIdNumber),
-      claimerPhone: readString(claimerInfo.claimerPhone),
+      claimerIdNumber: readString(claimerInfo.studentIdNumber) ?? readString(claimerInfo.claimerIdNumber),
       relationshipToItem: readString(claimerInfo.relationshipToItem),
       verificationNotes: readString(claimerInfo.verificationNotes),
     };
@@ -77,9 +75,7 @@ async function main() {
       select: {
         id: true,
         claimerName: true,
-        claimerEmail: true,
         claimerIdNumber: true,
-        claimerPhone: true,
         relationshipToItem: true,
         verificationNotes: true,
       },
@@ -92,9 +88,7 @@ async function main() {
 
     const needsUpdate =
       existingItem.claimerName !== nextData.claimerName ||
-      existingItem.claimerEmail !== nextData.claimerEmail ||
       existingItem.claimerIdNumber !== nextData.claimerIdNumber ||
-      existingItem.claimerPhone !== nextData.claimerPhone ||
       existingItem.relationshipToItem !== nextData.relationshipToItem ||
       existingItem.verificationNotes !== nextData.verificationNotes;
 

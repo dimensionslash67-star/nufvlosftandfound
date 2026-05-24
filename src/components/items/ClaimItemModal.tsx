@@ -13,9 +13,7 @@ type ClaimableItem = {
 
 const initialForm = {
   claimerName: '',
-  claimerEmail: '',
-  claimerPhone: '',
-  claimerIdNumber: '',
+  studentIdNumber: '',
   relationshipToItem: '',
   verificationNotes: '',
 };
@@ -50,7 +48,7 @@ export function ClaimItemModal({
       return;
     }
 
-    if (!formData.claimerName || !formData.claimerEmail || !formData.claimerIdNumber) {
+    if (!formData.claimerName || !formData.studentIdNumber) {
       setError('Please fill in all required fields.');
       return;
     }
@@ -117,31 +115,13 @@ export function ClaimItemModal({
               value={formData.claimerName}
             />
             <Input
-              error={!formData.claimerEmail && error ? 'Required' : undefined}
-              label="Email Address"
+              error={!formData.studentIdNumber && error ? 'Required' : undefined}
+              label="Student ID Number"
               onChange={(event) =>
-                setFormData((current) => ({ ...current, claimerEmail: event.target.value }))
+                setFormData((current) => ({ ...current, studentIdNumber: event.target.value }))
               }
               required
-              type="email"
-              value={formData.claimerEmail}
-            />
-            <Input
-              label="Phone Number"
-              onChange={(event) =>
-                setFormData((current) => ({ ...current, claimerPhone: event.target.value }))
-              }
-              type="tel"
-              value={formData.claimerPhone}
-            />
-            <Input
-              error={!formData.claimerIdNumber && error ? 'Required' : undefined}
-              label="Valid ID Number"
-              onChange={(event) =>
-                setFormData((current) => ({ ...current, claimerIdNumber: event.target.value }))
-              }
-              required
-              value={formData.claimerIdNumber}
+              value={formData.studentIdNumber}
             />
           </div>
 

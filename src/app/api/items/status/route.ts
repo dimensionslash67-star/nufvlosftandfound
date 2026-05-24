@@ -60,8 +60,6 @@ export async function PATCH(request: NextRequest) {
         claimerId,
         claimedAt,
         claimerName: status === 'CLAIMED' ? undefined : null,
-        claimerEmail: status === 'CLAIMED' ? undefined : null,
-        claimerPhone: status === 'CLAIMED' ? undefined : null,
         claimerIdNumber: status === 'CLAIMED' ? undefined : null,
         relationshipToItem: status === 'CLAIMED' ? undefined : null,
         verificationNotes: status === 'CLAIMED' ? undefined : null,

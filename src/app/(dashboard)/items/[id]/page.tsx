@@ -150,30 +150,12 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                 </div>
                 <div>
                   <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    Email
-                  </dt>
-                  <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
-                    {item.claimerEmail || 'N/A'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    ID Number
+                    Student ID Number
                   </dt>
                   <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
                     {item.claimerIdNumber || 'N/A'}
                   </dd>
                 </div>
-                {item.claimerPhone ? (
-                  <div>
-                    <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                      Contact Number
-                    </dt>
-                    <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
-                      {item.claimerPhone}
-                    </dd>
-                  </div>
-                ) : null}
                 {item.relationshipToItem ? (
                   <div>
                     <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">

@@ -88,19 +88,9 @@ export function ItemDetailModal({
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Email</p>
-                  <p className="text-sm text-slate-700 dark:text-slate-200">{item.claimerEmail || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">ID Number</p>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Student ID Number</p>
                   <p className="text-sm text-slate-700 dark:text-slate-200">{item.claimerIdNumber || 'N/A'}</p>
                 </div>
-                {item.claimerPhone ? (
-                  <div>
-                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Phone</p>
-                    <p className="text-sm text-slate-700 dark:text-slate-200">{item.claimerPhone}</p>
-                  </div>
-                ) : null}
                 <div>
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Claimed At</p>
                   <p className="text-sm text-slate-700 dark:text-slate-200">
