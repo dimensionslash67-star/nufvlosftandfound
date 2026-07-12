@@ -90,8 +90,8 @@ const ITEM_TYPE_MAP: Record<number, string> = {
 // ─── Status Mapping ───────────────────────────────────────────────────────────
 // Maps legacy status → new Prisma ItemStatus enum
 
-function mapStatus(legacyStatus: string): 'PENDING' | 'CLAIMED' | 'RETURNED' | 'DISPOSED' {
-  switch (legacyStatus.toUpperCase()) {
+function mapStatus(legacyStatus: string | null | undefined): 'PENDING' | 'CLAIMED' | 'RETURNED' | 'DISPOSED' {
+  switch ((legacyStatus ?? '').toUpperCase()) {
     case 'AVAILABLE': return 'PENDING';   // Available in old system = Pending in new
     case 'CLAIMED':   return 'CLAIMED';
     case 'RETURNED':  return 'RETURNED';
@@ -103,7 +103,7 @@ function mapStatus(legacyStatus: string): 'PENDING' | 'CLAIMED' | 'RETURNED' | '
 
 // ─── Action Mapping ───────────────────────────────────────────────────────────
 
-function mapAction(legacyAction: string): string {
+function mapAction(legacyAction: string | null | undefined): string {
   const map: Record<string, string> = {
     'CREATE':        'ITEM_CREATED',
     'UPDATE':        'ITEM_UPDATED',
@@ -116,7 +116,8 @@ function mapAction(legacyAction: string): string {
     'LOGOUT':        'USER_LOGOUT',
     'PASSWORD_CHANGE': 'USER_PASSWORD_CHANGED',
   };
-  return map[legacyAction.toUpperCase()] || legacyAction;
+  const normalized = (legacyAction ?? '').toUpperCase();
+  return map[normalized] || normalized || 'UNKNOWN';
 }
 
 // ─── SQL Parser ───────────────────────────────────────────────────────────────
@@ -247,6 +248,75 @@ function rowToAuditLog(row: string[]): LegacyAuditLog {
   };
 }
 
+function parseDateOrNull(...values: Array<string | null | undefined>): Date | null {
+  for (const value of values) {
+    if (!value || !String(value).trim()) {
+      continue;
+    }
+
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTransientDatabaseError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  return [
+    'Server has closed the connection',
+    "Can't reach database server",
+    'Connection closed',
+    'Connection terminated unexpectedly',
+    'ECONNRESET',
+    'ETIMEDOUT',
+    'P1001',
+  ].some((pattern) => message.includes(pattern));
+}
+
+async function withRetry<T>(
+  label: string,
+  operation: () => Promise<T>,
+  maxAttempts = 6,
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+
+      if (!isTransientDatabaseError(error) || attempt === maxAttempts) {
+        throw error;
+      }
+
+      const delayMs = attempt * 1000;
+      console.warn(
+        `   ⚠️  ${label} failed with a transient DB error (attempt ${attempt}/${maxAttempts}). Retrying in ${delayMs}ms...`,
+      );
+
+      try {
+        await prisma.$disconnect();
+      } catch {
+        // Ignore disconnect failures during retry cleanup.
+      }
+
+      await sleep(delayMs);
+      await prisma.$connect();
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(`Retry failed for ${label}`);
+}
+
 // ─── Main Migration ───────────────────────────────────────────────────────────
 
 async function main() {
@@ -339,6 +409,7 @@ async function main() {
   const itemIdMap = new Map<number, string>();
 
   let itemsCreated = 0;
+  let itemsSkipped = 0;
   let itemsFailed = 0;
 
   // Use the first admin as the default reporter (Christopher Joseph Villamin Aureo)
@@ -357,8 +428,17 @@ async function main() {
 
   for (const li of legacyItems) {
     try {
+      if (!Number.isFinite(li.id) || (!li.item_code && !li.item_description)) {
+        itemsFailed++;
+        console.error('   ❌ Skipped malformed legacy item row');
+        continue;
+      }
+
       const category = ITEM_TYPE_MAP[li.item_type_id] || 'Other Materials';
       const status = mapStatus(li.status);
+      const createdAt = parseDateOrNull(li.created_at, li.date_received, li.updated_at) ?? new Date();
+      const dateReported = parseDateOrNull(li.date_received, li.created_at, li.updated_at) ?? createdAt;
+      const updatedAt = parseDateOrNull(li.updated_at, li.claimed_at, li.claimed_date, li.created_at) ?? createdAt;
 
       // Combine level + specific place into location
       const locationParts = [li.level_found, li.specific_place].filter(
@@ -399,30 +479,60 @@ async function main() {
 
       // Determine claimed fields
       const isClaimed = status === 'CLAIMED';
-      const claimedAt = isClaimed && li.claimed_date ? new Date(li.claimed_date) : null;
+      const claimedAt = isClaimed ? parseDateOrNull(li.claimed_at, li.claimed_date) : null;
 
       // Determine disposed fields
       const isDisposed = status === 'DISPOSED';
 
-      const newItem = await prisma.item.create({
-        data: {
-          itemCode,
-          itemName:    li.item_description || li.item_code,
-          description: li.item_description || null,
-          category:    category,
-          location:    location,
-          status:      status,
-          imageUrl:    li.image_url || null,
-          contactInfo: contactInfo,
-          reporterId:  reporterId,
-          claimedAt:   claimedAt,
-          isDisposed:  isDisposed,
-          disposalDate: isDisposed ? new Date(li.updated_at) : null,
-          dateReported: new Date(li.date_received),
-          createdAt:   new Date(li.created_at),
-          updatedAt:   new Date(li.updated_at),
-        },
-      });
+      const existingItem = await withRetry(
+        `find existing item ${li.item_code || li.id}`,
+        () =>
+          prisma.item.findFirst({
+            where: itemCode
+              ? {
+                  OR: [
+                    { itemCode },
+                    { contactInfo },
+                  ],
+                }
+              : {
+                  contactInfo,
+                },
+            select: {
+              id: true,
+            },
+          }),
+      );
+
+      if (existingItem) {
+        itemIdMap.set(li.id, existingItem.id);
+        itemsSkipped++;
+        continue;
+      }
+
+      const newItem = await withRetry(
+        `create item ${li.item_code || li.id}`,
+        () =>
+          prisma.item.create({
+            data: {
+              itemCode,
+              itemName:    li.item_description?.trim() || li.item_code || `Legacy Item ${li.id}`,
+              description: li.item_description || null,
+              category:    category,
+              location:    location,
+              status:      status,
+              imageUrl:    li.image_url || null,
+              contactInfo: contactInfo,
+              reporterId:  reporterId,
+              claimedAt:   claimedAt,
+              isDisposed:  isDisposed,
+              disposalDate: isDisposed ? parseDateOrNull(li.updated_at, li.created_at, li.date_received) ?? updatedAt : null,
+              dateReported: dateReported,
+              createdAt:   createdAt,
+              updatedAt:   updatedAt,
+            },
+          }),
+      );
 
       itemIdMap.set(li.id, newItem.id);
       itemsCreated++;
@@ -436,7 +546,7 @@ async function main() {
     }
   }
 
-  console.log(`\n   Items created: ${itemsCreated}, failed: ${itemsFailed}\n`);
+  console.log(`\n   Items created: ${itemsCreated}, skipped: ${itemsSkipped}, failed: ${itemsFailed}\n`);
 
   // After main migration loop, backfill missing item codes
   console.log('\n🔢 Backfilling item codes for legacy items...');
@@ -448,10 +558,14 @@ async function main() {
 
   for (const item of itemsWithoutCode) {
     const itemCode = await generateItemCode();
-    await prisma.item.update({
-      where: { id: item.id },
-      data: { itemCode },
-    });
+    await withRetry(
+      `backfill item code for ${item.id}`,
+      () =>
+        prisma.item.update({
+          where: { id: item.id },
+          data: { itemCode },
+        }),
+    );
   }
   console.log(`   Backfilled ${itemsWithoutCode.length} item codes`);
 
@@ -471,24 +585,29 @@ async function main() {
 
       // Resolve item ID if present
       const entityId = la.item_id ? (itemIdMap.get(la.item_id) || null) : null;
+      const createdAt = parseDateOrNull(la.created_at, la.timestamp) ?? new Date();
 
-      await prisma.auditLog.create({
-        data: {
-          userId:     userId,
-          action:     mapAction(la.action),
-          entityType: la.item_id ? 'ITEM' : 'USER',
-          entityId:   entityId,
-          details: {
-            legacyItemCode: la.item_code || null,
-            legacyDetails:  la.details || null,
-            legacyUserName: la.user_name || null,
-            legacyAction:   la.action,
-          },
-          ipAddress:  'migrated',
-          userAgent:  'migration-script',
-          createdAt:  new Date(la.created_at),
-        },
-      });
+      await withRetry(
+        `create audit log ${la.id}`,
+        () =>
+          prisma.auditLog.create({
+            data: {
+              userId:     userId,
+              action:     mapAction(la.action),
+              entityType: la.item_id ? 'ITEM' : 'USER',
+              entityId:   entityId,
+              details: {
+                legacyItemCode: la.item_code || null,
+                legacyDetails:  la.details || null,
+                legacyUserName: la.user_name || null,
+                legacyAction:   la.action,
+              },
+              ipAddress:  'migrated',
+              userAgent:  'migration-script',
+              createdAt:  createdAt,
+            },
+          }),
+      );
 
       logsCreated++;
     } catch (err: any) {
