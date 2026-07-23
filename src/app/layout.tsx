@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { SurveyWidget } from '@/components/SurveyWidget';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -21,7 +20,6 @@ export default function RootLayout({
     <html lang="en">
       <body>
         {children}
-        <SurveyWidget />
       </body>
     </html>
   );

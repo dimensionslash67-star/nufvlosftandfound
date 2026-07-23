@@ -5,6 +5,7 @@ import { ItemCard } from '@/components/items/ItemCard';
 import { ItemStatusBadge } from '@/components/items/ItemStatusBadge';
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
+import { SurveyWidget } from '@/components/SurveyWidget';
 import { getItemById } from '@/lib/items';
 import { formatDisplayDate, getUserDisplayName } from '@/lib/utils';
 
@@ -100,6 +101,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       </main>
 
       <Footer />
+      <SurveyWidget />
     </div>
   );
 }
