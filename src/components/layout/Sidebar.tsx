@@ -42,6 +42,7 @@ export function Sidebar({
           item.danger && !active && 'hover:text-[#fca5a5]',
         )}
         href={item.href}
+        prefetch={!item.danger}
         onClick={onClose}
         rel={opensInNewTab ? 'noreferrer' : undefined}
         target={opensInNewTab ? '_blank' : undefined}

@@ -64,6 +64,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 className="flex items-center rounded-2xl px-4 py-3 text-sm font-medium text-white/75 transition hover:bg-white/10 hover:text-white"
                 href={item.href}
+                prefetch={item.href !== '/logout'}
               >
                 {item.label}
               </Link>
