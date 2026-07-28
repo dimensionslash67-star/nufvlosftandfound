@@ -41,7 +41,7 @@ async function getUserRemovalCounts(userId: string) {
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await requireAdminPayload(request);
 
@@ -58,8 +58,10 @@ export async function PATCH(
     );
   }
 
+  const { id } = await params;
+
   const existingUser = await prisma.user.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: userSelect,
   });
 
@@ -72,7 +74,7 @@ export async function PATCH(
 
   const duplicateUser = await prisma.user.findFirst({
     where: {
-      id: { not: params.id },
+      id: { not: id },
       OR: [{ email: normalizedEmail }, { username: normalizedUsername }],
     },
     select: { id: true },
@@ -87,7 +89,7 @@ export async function PATCH(
 
   try {
     const updatedUser = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         firstName: normalizeOptionalString(parsed.data.firstName),
         lastName: normalizeOptionalString(parsed.data.lastName),
@@ -133,7 +135,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await requireAdminPayload(request);
 
@@ -141,7 +143,9 @@ export async function DELETE(
     return NextResponse.json({ message: 'Forbidden.' }, { status: 403 });
   }
 
-  if (admin.userId === params.id) {
+  const { id } = await params;
+
+  if (admin.userId === id) {
     return NextResponse.json(
       { message: 'You cannot delete your own account.' },
       { status: 400 },
@@ -149,7 +153,7 @@ export async function DELETE(
   }
 
   const existingUser = await prisma.user.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: userSelect,
   });
 
@@ -157,7 +161,7 @@ export async function DELETE(
     return NextResponse.json({ message: 'User not found.' }, { status: 404 });
   }
 
-  const removalCounts = await getUserRemovalCounts(params.id);
+  const removalCounts = await getUserRemovalCounts(id);
   const canHardDelete = removalCounts.total === 0;
   let action: 'ADMIN_USER_DELETED' | 'ADMIN_USER_DEACTIVATED' = 'ADMIN_USER_DEACTIVATED';
   let responseUser = existingUser;
@@ -166,14 +170,14 @@ export async function DELETE(
   try {
     if (canHardDelete) {
       await prisma.user.delete({
-        where: { id: params.id },
+        where: { id },
       });
 
       action = 'ADMIN_USER_DELETED';
       hardDeleted = true;
     } else {
       responseUser = await prisma.user.update({
-        where: { id: params.id },
+        where: { id },
         data: { isActive: false },
         select: userSelect,
       });
@@ -181,7 +185,7 @@ export async function DELETE(
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
       responseUser = await prisma.user.update({
-        where: { id: params.id },
+        where: { id },
         data: { isActive: false },
         select: userSelect,
       });
@@ -199,7 +203,7 @@ export async function DELETE(
     userId: admin.userId,
     action,
     entityType: 'USER',
-    entityId: params.id,
+    entityId: id,
     details: {
       user: existingUser,
       removalCounts,
