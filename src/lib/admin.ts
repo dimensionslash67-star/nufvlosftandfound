@@ -3,13 +3,24 @@ import { eachDayOfInterval, format, startOfDay, subDays } from 'date-fns';
 import type { NextRequest } from 'next/server';
 import {
   getAuthPayloadFromRequest,
-  getAuthenticatedUserFromRequest as getRequestUser,
   getCurrentUser,
   type AuthenticatedUser,
 } from './auth';
 import { ITEMS_PER_PAGE, ITEM_STATUS_LABELS } from './constants';
 import { prisma } from './prisma';
 import { formatDisplayDate, getUserDisplayName } from './utils';
+
+const adminSessionUserSelect = {
+  id: true,
+  email: true,
+  username: true,
+  firstName: true,
+  lastName: true,
+  role: true,
+  isActive: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
 
 const SETTING_KEYS = {
   siteName: 'site_name',
@@ -50,10 +61,29 @@ export async function getAuthenticatedUserFromRequest() {
   return getCurrentUser();
 }
 
-export async function requireAuthenticatedPayload(request: NextRequest) {
-  const user = await getRequestUser(request);
+async function getAuthenticatedUserFromIncomingRequest(request: NextRequest) {
+  const payload = await getAuthPayloadFromRequest(request);
 
-  if (!user?.isActive) {
+  if (!payload?.userId) {
+    return null;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: adminSessionUserSelect,
+  });
+
+  if (!user || !user.isActive) {
+    return null;
+  }
+
+  return user;
+}
+
+export async function requireAuthenticatedPayload(request: NextRequest) {
+  const user = await getAuthenticatedUserFromIncomingRequest(request);
+
+  if (!user) {
     return null;
   }
 
@@ -66,13 +96,13 @@ export async function requireAuthenticatedPayload(request: NextRequest) {
 }
 
 export async function requireAdminConsolePayload(request: NextRequest) {
-  return requireAuthenticatedPayload(request);
+  return requireAdminPayload(request);
 }
 
-export async function requireAdminPayload(_request: NextRequest) {
-  const user = await getCurrentUser();
+export async function requireAdminPayload(request: NextRequest) {
+  const user = await getAuthenticatedUserFromIncomingRequest(request);
 
-  if (!user?.isActive || user.role !== 'ADMIN') {
+  if (!user || user.role?.toString().trim().toUpperCase() !== 'ADMIN') {
     return null;
   }
 
