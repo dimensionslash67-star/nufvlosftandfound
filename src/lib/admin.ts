@@ -69,8 +69,19 @@ export async function requireAdminConsolePayload(request: NextRequest) {
   return requireAuthenticatedPayload(request);
 }
 
-export async function requireAdminPayload(request: NextRequest) {
-  return requireAuthenticatedPayload(request);
+export async function requireAdminPayload(_request: NextRequest) {
+  const user = await getCurrentUser();
+
+  if (!user?.isActive || user.role !== 'ADMIN') {
+    return null;
+  }
+
+  return {
+    userId: user.id,
+    email: user.email,
+    username: user.username,
+    role: user.role,
+  };
 }
 
 export async function getAdminConsoleUserFromCookies() {

@@ -76,6 +76,19 @@ export const adminUserUpdateSchema = z.object({
   'At least one field must be provided',
 );
 
+export const adminUserEditSchema = z.object({
+  firstName: z.string().max(100).optional(),
+  lastName: z.string().max(100).optional(),
+  email: z.string().email('Invalid email'),
+  username: z.string().min(3, 'Username must be at least 3 characters'),
+  role: z.enum(USER_ROLES),
+  isActive: z.boolean(),
+});
+
+export const adminBulkDeleteUsersSchema = z.object({
+  userIds: z.array(z.string().min(1)).min(1, 'At least one user must be selected'),
+});
+
 export const adminAuditQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   search: z.string().trim().optional(),
