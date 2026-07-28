@@ -1,20 +1,12 @@
-import { redirect } from 'next/navigation';
 import { ProfileSettings } from '@/components/admin/ProfileSettings';
-import { getCurrentUser } from '@/lib/auth';
+import { requireAdmin } from '@/lib/adminGuard';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+export const fetchCache = 'force-no-store';
 
 export default async function Page() {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    redirect('/login');
-  }
-
-  if (user.role !== 'ADMIN') {
-    redirect('/dashboard');
-  }
+  const user = await requireAdmin();
 
   return (
     <div className="space-y-6">

@@ -1,22 +1,7 @@
-import { redirect } from 'next/navigation';
-import { getCurrentUser } from '@/lib/auth';
-
-export const dynamic = 'force-dynamic';
-
-export default async function AdminLayout({
+export default function AdminLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const currentUser = await getCurrentUser();
-
-  if (!currentUser) {
-    redirect('/login');
-  }
-
-  if (currentUser.role !== 'ADMIN') {
-    redirect('/dashboard');
-  }
-
   return <>{children}</>;
 }

@@ -1,25 +1,17 @@
-import { redirect } from 'next/navigation';
 import { ReportGenerator } from '@/components/admin/ReportGenerator';
-import { getCurrentUser } from '@/lib/auth';
 import { getReportPreviewData, getReportStatsData, type ReportType } from '@/lib/admin';
+import { requireAdmin } from '@/lib/adminGuard';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+export const fetchCache = 'force-no-store';
 
 export default async function Page({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const currentUser = await getCurrentUser();
-
-  if (!currentUser) {
-    redirect('/login');
-  }
-
-  if (currentUser.role !== 'ADMIN') {
-    redirect('/dashboard');
-  }
+  await requireAdmin();
 
   const params = await searchParams;
   const type = ((Array.isArray(params.type) ? params.type[0] : params.type) ?? 'items') as ReportType;

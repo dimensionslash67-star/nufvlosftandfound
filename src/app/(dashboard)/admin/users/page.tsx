@@ -1,12 +1,19 @@
+import { requireAdmin } from '@/lib/adminGuard';
 import { UserTable } from '@/components/admin/UserTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { getUsersPageData } from '@/lib/admin';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
 
 export default async function Page({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await requireAdmin();
+
   const params = await searchParams;
   const page = Number((Array.isArray(params.page) ? params.page[0] : params.page) ?? '1');
   const search = Array.isArray(params.search) ? params.search[0] : params.search;

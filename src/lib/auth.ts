@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { jwtVerify, SignJWT, type JWTPayload } from 'jose';
-import { cookies, headers } from 'next/headers';
+import { cookies } from 'next/headers';
 import type { NextRequest } from 'next/server';
 import { prisma } from './prisma';
 
@@ -178,20 +178,6 @@ export async function verifyOwnerPinJWT(token: string): Promise<OwnerPinJWTPaylo
 }
 
 export async function getAuthPayloadFromRequest(request: NextRequest) {
-  const headerUserId = request.headers.get('x-user-id');
-  const headerEmail = request.headers.get('x-user-email');
-  const headerRole = request.headers.get('x-user-role');
-  const headerUsername = request.headers.get('x-user-username');
-
-  if (headerUserId && headerEmail && headerRole && headerUsername) {
-    return {
-      userId: headerUserId,
-      email: headerEmail,
-      role: headerRole,
-      username: headerUsername,
-    } as AuthJWTPayload;
-  }
-
   const cookieName = getAuthCookieName();
   let token = request.cookies.get(cookieName)?.value;
 
@@ -271,18 +257,14 @@ export async function getFallbackAuthenticatedUser(): Promise<AuthenticatedUser 
 }
 
 export async function getCurrentUser() {
-  const requestHeaders = await headers();
-  const headerUserId = requestHeaders.get('x-user-id');
+  const cookieStore = await cookies();
+  const token = cookieStore.get(getAuthCookieName())?.value;
 
-  if (headerUserId) {
-    const headerUser = await getAuthenticatedUserById(headerUserId);
-
-    if (headerUser) {
-      return headerUser;
-    }
+  if (!token) {
+    return null;
   }
 
-  const payload = await getCurrentUserPayload();
+  const payload = await verifyJWT(token);
 
   if (!payload?.userId) {
     return null;
