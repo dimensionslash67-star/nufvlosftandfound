@@ -87,7 +87,7 @@ export function LoginForm() {
       <form className="space-y-5" onSubmit={onSubmit}>
         <div className="space-y-2">
           <label className="text-sm font-medium text-slate-700" htmlFor="email">
-            Email Address
+            Email or Username
           </label>
           <div className="flex items-center gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition focus-within:border-[#7c3aed] focus-within:ring-2 focus-within:ring-[#7c3aed]/15">
             <EnvelopeIcon />

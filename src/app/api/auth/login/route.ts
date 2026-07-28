@@ -26,10 +26,20 @@ export async function POST(request: Request) {
 
     const identifier = parsed.data.email.trim();
     const normalizedEmail = identifier.toLowerCase();
+    const isEmailLogin = identifier.includes('@');
+
+    console.info('[LOGIN] attempt received', {
+      identifier,
+      type: isEmailLogin ? 'email' : 'username',
+      rememberMe: parsed.data.rememberMe,
+    });
 
     const user = await prisma.user.findFirst({
       where: {
-        OR: [{ email: normalizedEmail }, { username: identifier }],
+        OR: [
+          { email: { equals: normalizedEmail, mode: 'insensitive' } },
+          { username: { equals: identifier, mode: 'insensitive' } },
+        ],
       },
       select: {
         id: true,
@@ -45,11 +55,23 @@ export async function POST(request: Request) {
       },
     });
 
+    console.info('[LOGIN] user lookup result', user
+      ? {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          isActive: user.isActive,
+          role: user.role,
+        }
+      : null);
+
     if (!user) {
+      console.info('[LOGIN] rejected: no matching user');
       return NextResponse.json({ message: 'Invalid credentials.' }, { status: 401 });
     }
 
     if (!user.isActive) {
+      console.info('[LOGIN] rejected: account inactive');
       return NextResponse.json(
         { message: 'This account has been deactivated. Contact an administrator.' },
         { status: 403 },
@@ -57,8 +79,13 @@ export async function POST(request: Request) {
     }
 
     const passwordMatches = await comparePassword(parsed.data.password, user.password);
+    console.info('[LOGIN] password match result', {
+      userId: user.id,
+      passwordMatches,
+    });
 
     if (!passwordMatches) {
+      console.info('[LOGIN] rejected: password mismatch');
       return NextResponse.json({ message: 'Invalid credentials.' }, { status: 401 });
     }
 
@@ -67,6 +94,12 @@ export async function POST(request: Request) {
       email: user.email,
       role: user.role,
       username: user.username,
+      rememberMe: parsed.data.rememberMe,
+    });
+
+    console.info('[LOGIN] success', {
+      userId: user.id,
+      email: user.email,
       rememberMe: parsed.data.rememberMe,
     });
 
