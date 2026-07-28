@@ -1,12 +1,27 @@
+import { redirect } from 'next/navigation';
 import { AuditLogTable } from '@/components/admin/AuditLogTable';
 import { Pagination } from '@/components/ui/Pagination';
+import { getCurrentUser } from '@/lib/auth';
 import { getAuditLogsPageData } from '@/lib/admin';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function Page({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    redirect('/login');
+  }
+
+  if (currentUser.role !== 'ADMIN') {
+    redirect('/dashboard');
+  }
+
   const params = await searchParams;
   const page = Number((Array.isArray(params.page) ? params.page[0] : params.page) ?? '1');
   const search = Array.isArray(params.search) ? params.search[0] : params.search;

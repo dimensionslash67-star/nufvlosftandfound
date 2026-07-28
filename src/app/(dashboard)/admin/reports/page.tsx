@@ -1,11 +1,26 @@
+import { redirect } from 'next/navigation';
 import { ReportGenerator } from '@/components/admin/ReportGenerator';
+import { getCurrentUser } from '@/lib/auth';
 import { getReportPreviewData, getReportStatsData, type ReportType } from '@/lib/admin';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function Page({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    redirect('/login');
+  }
+
+  if (currentUser.role !== 'ADMIN') {
+    redirect('/dashboard');
+  }
+
   const params = await searchParams;
   const type = ((Array.isArray(params.type) ? params.type[0] : params.type) ?? 'items') as ReportType;
   const page = Number((Array.isArray(params.page) ? params.page[0] : params.page) ?? '1');

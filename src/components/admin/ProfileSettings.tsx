@@ -81,6 +81,7 @@ export function ProfileSettings({ initialUser }: { initialUser: SettingsUser }) 
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({
         displayName,
         email,
@@ -121,6 +122,7 @@ export function ProfileSettings({ initialUser }: { initialUser: SettingsUser }) 
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({
         currentPassword,
         newPassword,

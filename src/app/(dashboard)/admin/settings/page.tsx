@@ -1,12 +1,19 @@
+import { redirect } from 'next/navigation';
 import { ProfileSettings } from '@/components/admin/ProfileSettings';
-import { getFallbackAuthenticatedUser } from '@/lib/auth';
-import { getAuthenticatedUserFromRequest } from '@/lib/admin';
+import { getCurrentUser } from '@/lib/auth';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function Page() {
-  const user = (await getAuthenticatedUserFromRequest()) ?? (await getFallbackAuthenticatedUser());
+  const user = await getCurrentUser();
 
   if (!user) {
-    return null;
+    redirect('/login');
+  }
+
+  if (user.role !== 'ADMIN') {
+    redirect('/dashboard');
   }
 
   return (
