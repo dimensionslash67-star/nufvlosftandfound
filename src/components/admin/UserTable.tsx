@@ -7,7 +7,7 @@ import { formatDisplayDate, getUserDisplayName } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Table } from '@/components/ui/Table';
-import { BulkDeleteUsersModal, type BulkDeleteUserResult } from './BulkDeleteUsersModal';
+import { BulkDeleteUsersModal, type BulkDeactivateUserResult } from './BulkDeleteUsersModal';
 import { EditUserModal } from './EditUserModal';
 
 export type ManageUser = {
@@ -96,26 +96,20 @@ export function UserTable({ initialUsers }: { initialUsers: ManageUser[] }) {
     router.refresh();
   };
 
-  const applyBulkDeleteResults = (results: BulkDeleteUserResult[]) => {
+  const applyBulkDeleteResults = (results: BulkDeactivateUserResult[]) => {
     const resultMap = new Map(results.map((result) => [result.id, result]));
 
     setUsers((current) =>
-      current.flatMap((user) => {
+      current.map((user) => {
         const outcome = resultMap.get(user.id);
         if (!outcome) {
-          return [user];
+          return user;
         }
 
-        if (outcome.hardDeleted) {
-          return [];
-        }
-
-        return [
-          {
-            ...user,
-            isActive: outcome.isActive,
-          },
-        ];
+        return {
+          ...user,
+          isActive: outcome.isActive,
+        };
       }),
     );
     setSelectedIds(new Set());
@@ -199,7 +193,7 @@ export function UserTable({ initialUsers }: { initialUsers: ManageUser[] }) {
               type="button"
               variant="danger"
             >
-              Delete Selected
+              Deactivate Selected
             </Button>
           </div>
         </div>
@@ -332,10 +326,10 @@ export function UserTable({ initialUsers }: { initialUsers: ManageUser[] }) {
                     className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
                       user.isActive
                         ? 'border border-green-300 bg-green-100 text-green-700 dark:border-green-700 dark:bg-green-900 dark:text-green-200'
-                        : 'border border-slate-300 bg-slate-200 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200'
+                        : 'border border-red-300 bg-red-100 text-red-700 dark:border-red-700 dark:bg-red-950 dark:text-red-200'
                     }`}
                   >
-                    {user.isActive ? 'Active' : 'Inactive'}
+                    {user.isActive ? 'Active' : 'Deactivated'}
                   </span>
                 </td>
                 <td className="px-5 py-4">{formatDisplayDate(user.createdAt)}</td>

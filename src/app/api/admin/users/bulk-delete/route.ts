@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuditLog } from '@/lib/audit';
 import { requireAdminPayload } from '@/lib/admin';
@@ -21,30 +20,12 @@ type BulkDeleteUserResult = {
   id: string;
   username: string;
   email: string;
-  action: 'deleted' | 'deactivated';
-  hardDeleted: boolean;
+  action: 'deactivated';
   isActive: boolean;
 };
 
 function normalizeUserIds(userIds: string[]) {
   return Array.from(new Set(userIds.map((id) => id.trim()).filter(Boolean)));
-}
-
-async function getUserRemovalCounts(userId: string) {
-  const [reportedCount, claimedCount, auditLogCount, resetTokenCount] = await Promise.all([
-    prisma.item.count({ where: { reporterId: userId } }),
-    prisma.item.count({ where: { claimerId: userId } }),
-    prisma.auditLog.count({ where: { userId } }),
-    prisma.passwordResetToken.count({ where: { userId } }),
-  ]);
-
-  return {
-    reportedCount,
-    claimedCount,
-    auditLogCount,
-    resetTokenCount,
-    total: reportedCount + claimedCount + auditLogCount + resetTokenCount,
-  };
 }
 
 export async function POST(request: NextRequest) {
@@ -71,7 +52,7 @@ export async function POST(request: NextRequest) {
 
   if (requestedUserIds.includes(admin.userId)) {
     return NextResponse.json(
-      { message: 'You cannot delete your own account.' },
+      { message: 'You cannot deactivate your own account.' },
       { status: 400 },
     );
   }
@@ -92,58 +73,29 @@ export async function POST(request: NextRequest) {
   const results: BulkDeleteUserResult[] = [];
 
   for (const user of existingUsers) {
-    const removalCounts = await getUserRemovalCounts(user.id);
-    const shouldHardDelete = removalCounts.total === 0;
-    let hardDeleted = false;
-    let action: BulkDeleteUserResult['action'] = 'deactivated';
-    let responseUser = user;
-
     try {
-      if (shouldHardDelete) {
-        await prisma.user.delete({
-          where: { id: user.id },
-        });
+      const responseUser = await prisma.user.update({
+        where: { id: user.id },
+        data: { isActive: false },
+        select: userSelect,
+      });
 
-        hardDeleted = true;
-        action = 'deleted';
-      } else {
-        responseUser = await prisma.user.update({
-          where: { id: user.id },
-          data: { isActive: false },
-          select: userSelect,
-        });
-      }
+      results.push({
+        id: responseUser.id,
+        username: responseUser.username,
+        email: responseUser.email,
+        action: 'deactivated',
+        isActive: responseUser.isActive,
+      });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-        responseUser = await prisma.user.update({
-          where: { id: user.id },
-          data: { isActive: false },
-          select: userSelect,
-        });
-        hardDeleted = false;
-        action = 'deactivated';
-      } else if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        missingUserIds.push(user.id);
-        continue;
-      } else {
-        console.error('[Admin Bulk User Delete] Error:', error);
-        return NextResponse.json({ message: 'Failed to delete selected users.' }, { status: 500 });
-      }
+      console.error('[Admin Bulk User Deactivate] Error:', error);
+      return NextResponse.json({ message: 'Failed to deactivate selected users.' }, { status: 500 });
     }
-
-    results.push({
-      id: responseUser.id,
-      username: responseUser.username,
-      email: responseUser.email,
-      action,
-      hardDeleted,
-      isActive: responseUser.isActive,
-    });
   }
 
   await createAuditLog({
     userId: admin.userId,
-    action: 'ADMIN_USERS_BULK_DELETED',
+    action: 'ADMIN_USERS_DEACTIVATED',
     entityType: 'USER',
     entityId: requestedUserIds.join(','),
     details: {
@@ -151,20 +103,18 @@ export async function POST(request: NextRequest) {
       missingUserIds,
       results,
       summary: {
-        deleted: results.filter((result) => result.hardDeleted).length,
-        deactivated: results.filter((result) => !result.hardDeleted).length,
+        deactivated: results.length,
       },
     },
     request,
   });
 
   return NextResponse.json({
-    message: 'Selected users processed successfully.',
+    message: 'Selected users deactivated successfully.',
     results,
     missingUserIds,
     summary: {
-      deleted: results.filter((result) => result.hardDeleted).length,
-      deactivated: results.filter((result) => !result.hardDeleted).length,
+      deactivated: results.length,
     },
   });
 }

@@ -45,8 +45,15 @@ export async function POST(request: Request) {
       },
     });
 
-    if (!user || !user.isActive) {
+    if (!user) {
       return NextResponse.json({ message: 'Invalid credentials.' }, { status: 401 });
+    }
+
+    if (!user.isActive) {
+      return NextResponse.json(
+        { message: 'This account has been deactivated. Contact an administrator.' },
+        { status: 403 },
+      );
     }
 
     const passwordMatches = await comparePassword(parsed.data.password, user.password);

@@ -6,12 +6,11 @@ import { Modal } from '@/components/ui/Modal';
 import { getUserDisplayName } from '@/lib/utils';
 import type { ManageUser } from './UserTable';
 
-export type BulkDeleteUserResult = {
+export type BulkDeactivateUserResult = {
   id: string;
   username: string;
   email: string;
-  action: 'deleted' | 'deactivated';
-  hardDeleted: boolean;
+  action: 'deactivated';
   isActive: boolean;
 };
 
@@ -24,12 +23,12 @@ export function BulkDeleteUsersModal({
   users: ManageUser[];
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (results: BulkDeleteUserResult[]) => void;
+  onSuccess: (results: BulkDeactivateUserResult[]) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleDelete = async () => {
+  const handleDeactivate = async () => {
     setError('');
     setLoading(true);
 
@@ -48,13 +47,13 @@ export function BulkDeleteUsersModal({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || 'Failed to delete selected users');
+        throw new Error(data.message || data.error || 'Failed to deactivate selected users');
       }
 
-      onSuccess((data.results ?? []) as BulkDeleteUserResult[]);
+      onSuccess((data.results ?? []) as BulkDeactivateUserResult[]);
       onClose();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to delete selected users';
+      const message = err instanceof Error ? err.message : 'Failed to deactivate selected users';
       setError(message);
     } finally {
       setLoading(false);
@@ -70,14 +69,14 @@ export function BulkDeleteUsersModal({
         }
       }}
       open={isOpen}
-      title="Delete Selected Users"
+      title="Deactivate Selected Users"
     >
       <div className="space-y-5">
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-100">
-          <p className="font-semibold">Confirm user removal</p>
+          <p className="font-semibold">Confirm account deactivation</p>
           <p className="mt-1 leading-6">
-            Users with related items, claims, or audit history will be deactivated instead of
-            permanently deleted to preserve references.
+            Selected users will be blocked from logging in, but their records and references will
+            remain in the database for audit and reporting.
           </p>
         </div>
 
@@ -109,8 +108,10 @@ export function BulkDeleteUsersModal({
           <Button disabled={loading} onClick={onClose} type="button" variant="outline">
             Cancel
           </Button>
-          <Button disabled={loading} type="button" variant="danger" onClick={handleDelete}>
-            {loading ? 'Deleting...' : `Delete ${users.length} User${users.length === 1 ? '' : 's'}`}
+          <Button disabled={loading} type="button" variant="danger" onClick={handleDeactivate}>
+            {loading
+              ? 'Deactivating...'
+              : `Deactivate ${users.length} User${users.length === 1 ? '' : 's'}`}
           </Button>
         </div>
       </div>

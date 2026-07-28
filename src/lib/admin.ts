@@ -407,7 +407,7 @@ export async function getReportPreviewData({
         Username: row.username,
         Email: row.email,
         Role: row.role,
-        Active: row.isActive ? 'Active' : 'Inactive',
+        Active: row.isActive ? 'Active' : 'Deactivated',
         'Created At': formatDisplayDate(row.createdAt, 'MMM d, yyyy'),
       })),
       columns: ['ID', 'Username', 'Email', 'Role', 'Active', 'Created At'],

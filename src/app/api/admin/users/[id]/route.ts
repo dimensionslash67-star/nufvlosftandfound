@@ -22,26 +22,9 @@ function normalizeOptionalString(value?: string | null) {
   return trimmed ? trimmed : null;
 }
 
-async function getUserRemovalCounts(userId: string) {
-  const [reportedCount, claimedCount, auditLogCount, resetTokenCount] = await Promise.all([
-    prisma.item.count({ where: { reporterId: userId } }),
-    prisma.item.count({ where: { claimerId: userId } }),
-    prisma.auditLog.count({ where: { userId } }),
-    prisma.passwordResetToken.count({ where: { userId } }),
-  ]);
-
-  return {
-    reportedCount,
-    claimedCount,
-    auditLogCount,
-    resetTokenCount,
-    total: reportedCount + claimedCount + auditLogCount + resetTokenCount,
-  };
-}
-
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const admin = await requireAdminPayload(request);
 
@@ -135,7 +118,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const admin = await requireAdminPayload(request);
 
@@ -147,7 +130,7 @@ export async function DELETE(
 
   if (admin.userId === id) {
     return NextResponse.json(
-      { message: 'You cannot delete your own account.' },
+      { message: 'You cannot deactivate your own account.' },
       { status: 400 },
     );
   }
@@ -161,62 +144,41 @@ export async function DELETE(
     return NextResponse.json({ message: 'User not found.' }, { status: 404 });
   }
 
-  const removalCounts = await getUserRemovalCounts(id);
-  const canHardDelete = removalCounts.total === 0;
-  let action: 'ADMIN_USER_DELETED' | 'ADMIN_USER_DEACTIVATED' = 'ADMIN_USER_DEACTIVATED';
-  let responseUser = existingUser;
-  let hardDeleted = false;
-
   try {
-    if (canHardDelete) {
-      await prisma.user.delete({
-        where: { id },
-      });
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: { isActive: false },
+      select: userSelect,
+    });
 
-      action = 'ADMIN_USER_DELETED';
-      hardDeleted = true;
-    } else {
-      responseUser = await prisma.user.update({
-        where: { id },
-        data: { isActive: false },
-        select: userSelect,
-      });
-    }
+    const alreadyInactive = !existingUser.isActive;
+
+    await createAuditLog({
+      userId: admin.userId,
+      action: 'ADMIN_USER_DEACTIVATED',
+      entityType: 'USER',
+      entityId: id,
+      details: {
+        before: existingUser,
+        after: updatedUser,
+        alreadyInactive,
+        deactivatedBy: admin.username,
+      },
+      request,
+    });
+
+    return NextResponse.json({
+      message: alreadyInactive ? 'User is already deactivated.' : 'User deactivated successfully.',
+      user: updatedUser,
+      deleted: false,
+      deactivated: true,
+    });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-      responseUser = await prisma.user.update({
-        where: { id },
-        data: { isActive: false },
-        select: userSelect,
-      });
-      action = 'ADMIN_USER_DEACTIVATED';
-      hardDeleted = false;
-    } else if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
       return NextResponse.json({ message: 'User not found.' }, { status: 404 });
-    } else {
-      console.error('[Admin User Delete] Error:', error);
-      return NextResponse.json({ message: 'Failed to delete user.' }, { status: 500 });
     }
+
+    console.error('[Admin User Deactivate] Error:', error);
+    return NextResponse.json({ message: 'Failed to deactivate user.' }, { status: 500 });
   }
-
-  await createAuditLog({
-    userId: admin.userId,
-    action,
-    entityType: 'USER',
-    entityId: id,
-    details: {
-      user: existingUser,
-      removalCounts,
-      hardDeleted,
-      mode: hardDeleted ? 'deleted' : 'deactivated',
-    },
-    request,
-  });
-
-  return NextResponse.json({
-    message: hardDeleted ? 'User deleted successfully.' : 'User deactivated successfully.',
-    user: responseUser,
-    deleted: hardDeleted,
-    deactivated: !hardDeleted,
-  });
 }
