@@ -1,9 +1,8 @@
 import Link from 'next/link';
 import { ItemsFilterBar } from '@/components/items/ItemsFilterBar';
-import { RevealableName } from '@/components/ui/RevealableName';
 import { SmartPagination } from '@/components/ui/SmartPagination';
 import { getItemsPage } from '@/lib/items';
-import { formatDisplayDate, formatItemCode, getStoredClaimerName } from '@/lib/utils';
+import { formatDisplayDate, formatItemCode } from '@/lib/utils';
 
 export default async function Page({
   searchParams,
@@ -45,7 +44,6 @@ export default async function Page({
                 <th className="px-5 py-4 font-semibold">Item Code</th>
                 <th className="px-5 py-4 font-semibold">Item Name</th>
                 <th className="px-5 py-4 font-semibold">Category</th>
-                <th className="px-5 py-4 font-semibold">Claimer</th>
                 <th className="px-5 py-4 font-semibold">Claimed At</th>
                 <th className="px-5 py-4 font-semibold">Action</th>
               </tr>
@@ -53,7 +51,7 @@ export default async function Page({
             <tbody className="divide-y divide-slate-200 text-sm text-slate-700 dark:divide-[#334155] dark:text-slate-200">
               {items.length === 0 ? (
                 <tr>
-                  <td className="px-5 py-10 text-center text-slate-500 dark:text-slate-400" colSpan={6}>
+                  <td className="px-5 py-10 text-center text-slate-500 dark:text-slate-400" colSpan={5}>
                     No claimed items found.
                   </td>
                 </tr>
@@ -69,11 +67,6 @@ export default async function Page({
                   </td>
                   <td className="px-5 py-4">{item.itemName}</td>
                   <td className="px-5 py-4">{item.category}</td>
-                  <td className="px-5 py-4">
-                    <div className="font-medium text-slate-900 dark:text-[#f1f5f9]">
-                      <RevealableName fullName={getStoredClaimerName(item)} />
-                    </div>
-                  </td>
                   <td className="px-5 py-4">{formatDisplayDate(item.claimedAt, 'MMM d, yyyy h:mm a')}</td>
                   <td className="px-5 py-4">
                     <Link
