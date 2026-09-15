@@ -33,4 +33,9 @@ The NUFV Lost & Found portal provides a centralized platform for tracking and cl
 - Export item and activity reports to CSV.
 - Track system audit history for campus transparency.
 
+---
+
+## Deployment
+
+Deploys automatically on Vercel. Push changes to the `main` branch to trigger a test redeploy on Vercel.
 
