@@ -56,15 +56,31 @@ export async function isOwnerUser(user: { id: string; email: string; role: strin
     return false;
   }
 
-  const ownerSetting = await prisma.setting.findUnique({
-    where: { key: OWNER_EMAIL_SETTING_KEY },
-  });
+  let configuredEmail = '';
 
-  if (ownerSetting?.value) {
-    return normalizeEmail(user.email) === normalizeEmail(ownerSetting.value);
+  try {
+    const ownerSetting = await prisma.setting.findUnique({
+      where: { key: OWNER_EMAIL_SETTING_KEY },
+    });
+    configuredEmail = normalizeEmail(ownerSetting?.value);
+  } catch (error) {
+    console.error(
+      '[ownerGuard] Failed to load owner_user_email; denying owner access.',
+      error,
+    );
+    return false;
   }
 
-  return true;
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(configuredEmail);
+
+  if (!isValidEmail) {
+    console.warn(
+      '[ownerGuard] owner_user_email is missing or invalid; denying owner access.',
+    );
+    return false;
+  }
+
+  return normalizeEmail(user.email) === configuredEmail;
 }
 
 export async function getOwnerUser(request?: NextRequest) {
