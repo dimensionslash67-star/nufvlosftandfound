@@ -47,6 +47,12 @@ async function getExistingItem(id: string) {
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const currentUser = await getAuthenticatedUserFromRequest(request);
+
+    if (!currentUser) {
+      return NextResponse.json({ message: 'Unauthorized.' }, { status: 401 });
+    }
+
     const { id } = await params;
     const item = await getExistingItem(id);
 
@@ -54,9 +60,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ message: 'Item not found.' }, { status: 404 });
     }
 
-    const currentUser = await getAuthenticatedUserFromRequest(request);
-    const isReporter = currentUser && item.reporterId === currentUser.id;
-    const isAdmin = currentUser && currentUser.role === 'ADMIN';
+    const isReporter = item.reporterId === currentUser.id;
+    const isAdmin = currentUser.role === 'ADMIN';
 
     if (!isReporter && !isAdmin) {
       const {

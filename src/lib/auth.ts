@@ -247,17 +247,26 @@ export async function getCurrentUser() {
     return null;
   }
 
-  return getAuthenticatedUserById(payload.userId);
+  try {
+    return await getAuthenticatedUserById(payload.userId);
+  } catch (error) {
+    console.error('Database lookup failed during auth verification:', error);
+    return null;
+  }
 }
 
 export async function getAuthenticatedUserFromRequest(request: NextRequest) {
   const payload = await getAuthPayloadFromRequest(request);
 
   if (payload?.userId) {
-    const authenticatedUser = await getAuthenticatedUserById(payload.userId);
+    try {
+      const authenticatedUser = await getAuthenticatedUserById(payload.userId);
 
-    if (authenticatedUser) {
-      return authenticatedUser;
+      if (authenticatedUser) {
+        return authenticatedUser;
+      }
+    } catch (error) {
+      console.error('Database lookup failed during auth verification:', error);
     }
   }
 
