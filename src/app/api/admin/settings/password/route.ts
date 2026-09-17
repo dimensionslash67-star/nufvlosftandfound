@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAuditLog } from '@/lib/audit';
-import { comparePassword, hashPassword } from '@/lib/auth';
+import {
+  comparePassword,
+  createJWT,
+  getAuthCookieName,
+  getAuthCookieOptions,
+  getAuthPayloadFromRequest,
+  hashPassword,
+} from '@/lib/auth';
 import { requireAdminPayload } from '@/lib/admin';
 import { prisma } from '@/lib/prisma';
 
@@ -41,6 +48,7 @@ export async function PATCH(request: NextRequest) {
       select: {
         id: true,
         password: true,
+        tokenVersion: true,
       },
     });
 
@@ -53,12 +61,20 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ message: 'Current password is incorrect.' }, { status: 400 });
     }
 
-    await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: {
         id: admin.userId,
       },
       data: {
         password: await hashPassword(parsed.data.newPassword),
+        tokenVersion: { increment: 1 },
+      },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        role: true,
+        tokenVersion: true,
       },
     });
 
@@ -70,7 +86,22 @@ export async function PATCH(request: NextRequest) {
       request,
     });
 
-    return NextResponse.json({ message: 'Password updated successfully.' });
+    const existingPayload = await getAuthPayloadFromRequest(request);
+    const token = await createJWT({
+      userId: updatedUser.id,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      username: updatedUser.username,
+      tokenVersion: updatedUser.tokenVersion,
+      rememberMe: existingPayload?.rememberMe,
+    });
+    const response = NextResponse.json({ message: 'Password updated successfully.' });
+    response.cookies.set(
+      getAuthCookieName(),
+      token,
+      getAuthCookieOptions(existingPayload?.rememberMe),
+    );
+    return response;
   } catch (error) {
     console.error('Password settings update error:', error);
     return NextResponse.json({ message: 'Unable to update password.' }, { status: 500 });

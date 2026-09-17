@@ -51,6 +51,7 @@ export async function POST(
       where: { id },
       data: {
         password: passwordHash,
+        tokenVersion: { increment: 1 },
       },
     });
 

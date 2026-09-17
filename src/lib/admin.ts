@@ -18,6 +18,7 @@ const adminSessionUserSelect = {
   lastName: true,
   role: true,
   isActive: true,
+  tokenVersion: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -73,7 +74,7 @@ async function getAuthenticatedUserFromIncomingRequest(request: NextRequest) {
     select: adminSessionUserSelect,
   });
 
-  if (!user || !user.isActive) {
+  if (!user || !user.isActive || user.tokenVersion !== payload.tokenVersion) {
     return null;
   }
 

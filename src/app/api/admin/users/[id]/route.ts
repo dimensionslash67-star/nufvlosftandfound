@@ -80,6 +80,9 @@ export async function PATCH(
         username: normalizedUsername,
         role: parsed.data.role,
         isActive: parsed.data.isActive,
+        ...(existingUser.isActive && !parsed.data.isActive
+          ? { tokenVersion: { increment: 1 } }
+          : {}),
       },
       select: userSelect,
     });
@@ -147,7 +150,10 @@ export async function DELETE(
   try {
     const updatedUser = await prisma.user.update({
       where: { id },
-      data: { isActive: false },
+      data: {
+        isActive: false,
+        ...(existingUser.isActive ? { tokenVersion: { increment: 1 } } : {}),
+      },
       select: userSelect,
     });
 

@@ -110,6 +110,9 @@ export async function PATCH(request: NextRequest) {
     data: {
       role: parsed.data.role,
       isActive: parsed.data.isActive,
+      ...(parsed.data.isActive === false
+        ? { tokenVersion: { increment: 1 } }
+        : {}),
     },
     select: {
       id: true,
@@ -152,7 +155,10 @@ export async function DELETE(request: NextRequest) {
 
   const user = await prisma.user.update({
     where: { id },
-    data: { isActive: false },
+    data: {
+      isActive: false,
+      tokenVersion: { increment: 1 },
+    },
     select: {
       id: true,
       username: true,

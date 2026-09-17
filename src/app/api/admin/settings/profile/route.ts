@@ -74,6 +74,7 @@ export async function PATCH(request: NextRequest) {
         email: true,
         username: true,
         role: true,
+        tokenVersion: true,
       },
     });
 
@@ -95,6 +96,7 @@ export async function PATCH(request: NextRequest) {
       email: user.email,
       role: user.role,
       username: user.username,
+      tokenVersion: user.tokenVersion,
       rememberMe: existingPayload?.rememberMe,
     });
 

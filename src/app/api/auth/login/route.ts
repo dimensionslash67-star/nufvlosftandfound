@@ -61,6 +61,7 @@ export async function POST(request: Request) {
         lastName: true,
         role: true,
         isActive: true,
+        tokenVersion: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -88,6 +89,7 @@ export async function POST(request: Request) {
       email: user.email,
       role: user.role,
       username: user.username,
+      tokenVersion: user.tokenVersion,
       rememberMe: parsed.data.rememberMe,
     });
 

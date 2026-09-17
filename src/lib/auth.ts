@@ -9,6 +9,7 @@ export type AuthJWTPayload = JWTPayload & {
   email: string;
   role: string;
   username: string;
+  tokenVersion: number;
   rememberMe?: boolean;
 };
 
@@ -25,6 +26,7 @@ export type AuthenticatedUser = {
   lastName: string | null;
   role: 'ADMIN' | 'USER';
   isActive: boolean;
+  tokenVersion: number;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -40,6 +42,7 @@ const authUserSelect = {
   lastName: true,
   role: true,
   isActive: true,
+  tokenVersion: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -106,6 +109,7 @@ export async function createJWT(payload: {
   email: string;
   role: string;
   username: string;
+  tokenVersion: number;
   rememberMe?: boolean;
 }): Promise<string> {
   return new SignJWT({
@@ -113,6 +117,7 @@ export async function createJWT(payload: {
     email: payload.email,
     role: payload.role,
     username: payload.username,
+    tokenVersion: payload.tokenVersion,
     rememberMe: Boolean(payload.rememberMe),
   })
     .setProtectedHeader({ alg: 'HS256' })
@@ -138,12 +143,16 @@ export async function verifyJWT(token: string): Promise<AuthJWTPayload | null> {
   try {
     const { payload } = await jwtVerify(token, getJWTSecret());
     const verifiedPayload = payload as Partial<AuthJWTPayload>;
+    const tokenVersion = verifiedPayload.tokenVersion;
 
     if (
       !verifiedPayload.userId ||
       !verifiedPayload.email ||
       !verifiedPayload.role ||
-      !verifiedPayload.username
+      !verifiedPayload.username ||
+      typeof tokenVersion !== 'number' ||
+      !Number.isInteger(tokenVersion) ||
+      tokenVersion < 0
     ) {
       console.error('JWT payload missing required fields:', verifiedPayload);
       return null;
@@ -220,13 +229,16 @@ export async function getCurrentUserPayload() {
   return verifyJWT(token);
 }
 
-async function getAuthenticatedUserById(userId: string): Promise<AuthenticatedUser | null> {
+async function getAuthenticatedUserById(
+  userId: string,
+  tokenVersion: number,
+): Promise<AuthenticatedUser | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: authUserSelect,
   });
 
-  if (!user?.isActive) {
+  if (!user?.isActive || user.tokenVersion !== tokenVersion) {
     return null;
   }
 
@@ -248,7 +260,7 @@ export async function getCurrentUser() {
   }
 
   try {
-    return await getAuthenticatedUserById(payload.userId);
+    return await getAuthenticatedUserById(payload.userId, payload.tokenVersion);
   } catch (error) {
     console.error('Database lookup failed during auth verification:', error);
     return null;
@@ -260,7 +272,10 @@ export async function getAuthenticatedUserFromRequest(request: NextRequest) {
 
   if (payload?.userId) {
     try {
-      const authenticatedUser = await getAuthenticatedUserById(payload.userId);
+      const authenticatedUser = await getAuthenticatedUserById(
+        payload.userId,
+        payload.tokenVersion,
+      );
 
       if (authenticatedUser) {
         return authenticatedUser;
@@ -272,4 +287,3 @@ export async function getAuthenticatedUserFromRequest(request: NextRequest) {
 
   return null;
 }
-

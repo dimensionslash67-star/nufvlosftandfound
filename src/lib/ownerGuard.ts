@@ -116,12 +116,13 @@ export async function getOwnerUser(request?: NextRequest) {
       lastName: true,
       role: true,
       isActive: true,
+      tokenVersion: true,
       createdAt: true,
       updatedAt: true,
     },
   });
 
-  if (!user || !(await isOwnerUser(user))) {
+  if (!user || user.tokenVersion !== payload.tokenVersion || !(await isOwnerUser(user))) {
     return null;
   }
 
