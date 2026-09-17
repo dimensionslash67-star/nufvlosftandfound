@@ -18,3 +18,4 @@ Thumbs.db
 prisma/dev.db
 generated
 *.sql
+*.tsbuildinfo
