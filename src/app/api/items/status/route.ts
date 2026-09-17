@@ -12,6 +12,10 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized.' }, { status: 401 });
     }
 
+    if (currentUser.role !== 'ADMIN') {
+      return NextResponse.json({ message: 'Forbidden.' }, { status: 403 });
+    }
+
     const url = new URL(request.url);
     const itemId = url.searchParams.get('id');
 

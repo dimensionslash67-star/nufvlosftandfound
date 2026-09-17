@@ -394,7 +394,7 @@ export function ManageItemsDashboard({
   };
 
   const canManageItem = (item: Item) => {
-    return true;
+    return Boolean(user && (user.role === 'ADMIN' || item.reporterId === user.id));
   };
 
   const openDeleteModal = (item: Item) => {
@@ -718,13 +718,15 @@ export function ManageItemsDashboard({
                         ) : null}
                         {item.status === 'PENDING' ? (
                           <>
-                            <button
-                              className="rounded-md bg-[#1e3a5f] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#24456f]"
-                              onClick={() => openClaimModal(item)}
-                              type="button"
-                            >
-                              Claim
-                            </button>
+                            {!authLoading && user?.role === 'ADMIN' ? (
+                              <button
+                                className="rounded-md bg-[#1e3a5f] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#24456f]"
+                                onClick={() => openClaimModal(item)}
+                                type="button"
+                              >
+                                Claim
+                              </button>
+                            ) : null}
                             {!authLoading && canManageItem(item) ? (
                               <button
                                 className="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-600"

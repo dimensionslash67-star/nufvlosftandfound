@@ -27,6 +27,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized.' }, { status: 401 });
     }
 
+    if (currentUser.role !== 'ADMIN') {
+      return NextResponse.json({ message: 'Forbidden.' }, { status: 403 });
+    }
+
     const json = await request.json();
     const parsed = claimSchema.safeParse(json);
 
