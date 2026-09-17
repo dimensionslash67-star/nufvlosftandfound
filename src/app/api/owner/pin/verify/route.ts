@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
-  const rl = checkRateLimit(`owner-pin:${ip}`, PIN_LIMIT, PIN_WINDOW_MS);
+  const rl = await checkRateLimit(`owner-pin:${ip}`, PIN_LIMIT, PIN_WINDOW_MS);
   if (!rl.allowed) {
     return NextResponse.json(
       { message: 'Too many PIN attempts. Please try again later.' },

@@ -16,7 +16,7 @@ const REGISTER_WINDOW_MS = 15 * 60 * 1000;
 
 export async function POST(request: Request) {
   const ip = getClientIp(request);
-  const rl = checkRateLimit(`register:${ip}`, REGISTER_LIMIT, REGISTER_WINDOW_MS);
+  const rl = await checkRateLimit(`register:${ip}`, REGISTER_LIMIT, REGISTER_WINDOW_MS);
   if (!rl.allowed) {
     return NextResponse.json(
       { message: 'Too many registration attempts. Please try again later.' },

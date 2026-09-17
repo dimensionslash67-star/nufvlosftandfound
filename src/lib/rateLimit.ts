@@ -1,28 +1,31 @@
-/**
- * In-memory sliding-window rate limiter.
- *
- * NOTE: This works correctly for single-instance deployments (e.g. a single Node.js process,
- * one Vercel Fluid compute instance). If you run multiple concurrent instances or serverless
- * replicas, upgrade to a shared store (e.g. Upstash Redis via @upstash/ratelimit) so limits
- * are enforced globally across all instances.
- */
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
 
-type Window = { timestamps: number[] };
+const redisUrl = process.env.KV_REST_API_URL;
+const redisToken = process.env.KV_REST_API_TOKEN;
+const redis = redisUrl && redisToken ? new Redis({ url: redisUrl, token: redisToken }) : null;
+const limiters = new Map<string, Ratelimit>();
 
-const store = new Map<string, Window>();
+function getLimiter(limit: number, windowMs: number): Ratelimit | null {
+  if (!redis) {
+    return null;
+  }
 
-// Prune stale entries periodically to avoid unbounded memory growth
-setInterval(
-  () => {
-    const now = Date.now();
-    for (const [key, win] of store.entries()) {
-      if (win.timestamps.length === 0 || now - win.timestamps[win.timestamps.length - 1]! > 60_000) {
-        store.delete(key);
-      }
-    }
-  },
-  5 * 60 * 1000,
-);
+  const cacheKey = `${limit}:${windowMs}`;
+  const existing = limiters.get(cacheKey);
+
+  if (existing) {
+    return existing;
+  }
+
+  const limiter = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(limit, `${windowMs} ms`),
+    prefix: 'nufv:rate-limit',
+  });
+  limiters.set(cacheKey, limiter);
+  return limiter;
+}
 
 /**
  * Check and record a rate-limit hit for the given key.
@@ -32,29 +35,29 @@ setInterval(
  * @param windowMs Window duration in milliseconds
  * @returns { allowed: boolean; remaining: number; resetMs: number }
  */
-export function checkRateLimit(
+export async function checkRateLimit(
   key: string,
   limit: number,
   windowMs: number,
-): { allowed: boolean; remaining: number; resetMs: number } {
-  const now = Date.now();
-  const cutoff = now - windowMs;
+): Promise<{ allowed: boolean; remaining: number; resetMs: number }> {
+  const limiter = getLimiter(limit, windowMs);
 
-  const win = store.get(key) ?? { timestamps: [] };
-  // Evict timestamps outside the current window
-  win.timestamps = win.timestamps.filter((t) => t > cutoff);
-
-  if (win.timestamps.length >= limit) {
-    const oldestInWindow = win.timestamps[0]!;
-    const resetMs = oldestInWindow + windowMs - now;
-    store.set(key, win);
-    return { allowed: false, remaining: 0, resetMs };
+  if (!limiter) {
+    console.warn('Rate limiting disabled: Upstash Redis environment variables are missing.');
+    return { allowed: true, remaining: limit, resetMs: 0 };
   }
 
-  win.timestamps.push(now);
-  store.set(key, win);
-
-  return { allowed: true, remaining: limit - win.timestamps.length, resetMs: 0 };
+  try {
+    const result = await limiter.limit(key);
+    return {
+      allowed: result.success,
+      remaining: result.remaining,
+      resetMs: result.success ? 0 : Math.max(0, result.reset - Date.now()),
+    };
+  } catch (error) {
+    console.warn('Rate-limit check failed; allowing request to proceed.', error);
+    return { allowed: true, remaining: limit, resetMs: 0 };
+  }
 }
 
 /**

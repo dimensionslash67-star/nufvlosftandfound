@@ -18,7 +18,7 @@ const FORGOT_WINDOW_MS = 60 * 60 * 1000;
 
 export async function POST(request: Request) {
   const ip = getClientIp(request);
-  const rl = checkRateLimit(`forgot:${ip}`, FORGOT_LIMIT, FORGOT_WINDOW_MS);
+  const rl = await checkRateLimit(`forgot:${ip}`, FORGOT_LIMIT, FORGOT_WINDOW_MS);
   if (!rl.allowed) {
     return NextResponse.json(
       { message: 'Too many password reset requests. Please try again later.' },
