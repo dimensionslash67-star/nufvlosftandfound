@@ -98,5 +98,6 @@ export const config = {
     '/search/:path*',
     '/settings/:path*',
     '/admin/:path*',
+    '/owner/:path*',
   ],
 };
