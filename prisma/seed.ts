@@ -5,10 +5,21 @@ import { hashPassword } from '../src/lib/auth';
 
 const prisma = new PrismaClient();
 
+// The seed script wipes audit logs and items, so it must never run silently
+// against a database that already holds real data. Pass --force to override.
+const FORCE = process.argv.includes('--force');
+const SB = '--------------------------------------------------';
+
 // Admin seed password: supply via SEED_ADMIN_PASSWORD env var, or one is randomly generated and
-// printed ONCE to the console. Never use a hardcoded default password in production.
+// printed ONCE to the console. The password is only applied when the account is first created
+// (or re-applied when SEED_ADMIN_PASSWORD is explicitly provided). Never use a hardcoded default.
 const SEED_ADMIN_PASSWORD =
   process.env.SEED_ADMIN_PASSWORD ?? crypto.randomBytes(20).toString('hex');
+const ADMIN_FORCE_PASSWORD = Boolean(process.env.SEED_ADMIN_PASSWORD);
+
+function randomPassword() {
+  return crypto.randomBytes(20).toString('hex');
+}
 
 const adminSeed = {
   email: 'admin@nufv.edu',
@@ -19,11 +30,13 @@ const adminSeed = {
   role: 'ADMIN' as UserRole,
 };
 
+// Sample users: every password is randomly generated per run (never a fixed known value).
+// Like the admin account, the generated password is applied only on first creation.
 const sampleUsers = [
   {
     email: 'maria.cruz@nufv.edu',
     username: 'mcruz',
-    password: 'password123',
+    password: randomPassword(),
     firstName: 'Maria',
     lastName: 'Cruz',
     role: 'USER' as UserRole,
@@ -31,7 +44,7 @@ const sampleUsers = [
   {
     email: 'john.reyes@nufv.edu',
     username: 'jreyes',
-    password: 'password123',
+    password: randomPassword(),
     firstName: 'John',
     lastName: 'Reyes',
     role: 'USER' as UserRole,
@@ -39,7 +52,7 @@ const sampleUsers = [
   {
     email: 'anne.santos@nufv.edu',
     username: 'asantos',
-    password: 'password123',
+    password: randomPassword(),
     firstName: 'Anne',
     lastName: 'Santos',
     role: 'USER' as UserRole,
@@ -53,25 +66,60 @@ const settings = [
   { key: 'admin_email', value: 'admin@nufv.edu' },
 ];
 
-async function upsertUser(user: {
+async function ensureSeedAllowed() {
+  if (FORCE) {
+    console.log('[seed] --force provided; destructive operations will proceed.');
+    return;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'Refusing to seed: NODE_ENV is "production". This script deletes ALL audit logs and items. ' +
+        'Set SEED_ADMIN_PASSWORD explicitly if seeding a fresh production database, and confirm with --force.',
+    );
+  }
+
+  const [userCount, itemCount, auditCount] = await Promise.all([
+    prisma.user.count(),
+    prisma.item.count(),
+    prisma.auditLog.count(),
+  ]);
+
+  const hasRealUsers = userCount > 5;
+  const hasNonSampleItems = itemCount > 10;
+  const hasAuditLogs = auditCount > 0;
+
+  if (hasRealUsers || hasNonSampleItems || hasAuditLogs) {
+    throw new Error(
+      `Refusing to seed: the database already contains data that is not seed sample data ` +
+        `(users=${userCount}, items=${itemCount}, auditLogs=${auditCount}). ` +
+        'This script deletes ALL audit logs and items. Rerun with --force to override.',
+    );
+  }
+}
+
+type SeedUser = {
   email: string;
   username: string;
   password: string;
   firstName: string;
   lastName: string;
   role: UserRole;
-}) {
-  const password = await hashPassword(user.password);
+};
 
-  return prisma.user.upsert({
+async function upsertUser(user: SeedUser, resetPassword: boolean, createdList: SeedUser[]) {
+  const password = await hashPassword(user.password);
+  const existing = await prisma.user.findUnique({ where: { email: user.email }, select: { id: true } });
+
+  const saved = await prisma.user.upsert({
     where: { email: user.email },
     update: {
       username: user.username,
-      password,
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
       isActive: true,
+      ...(resetPassword ? { password } : {}),
     },
     create: {
       email: user.email,
@@ -83,12 +131,25 @@ async function upsertUser(user: {
       isActive: true,
     },
   });
+
+  if (!existing && !createdList.some((u) => u.email === user.email)) {
+    createdList.push(user);
+  }
+
+  return saved;
 }
 
 async function main() {
-  const admin = await upsertUser(adminSeed);
-  const users = await Promise.all(sampleUsers.map(upsertUser));
-  const reporters = [admin, ...users];
+  await ensureSeedAllowed();
+
+  console.log(SB);
+  console.log('[seed] Seeding NUFV Lost and Found...');
+  console.log(SB);
+
+  const created = [] as SeedUser[];
+
+  const admin = await upsertUser(adminSeed, ADMIN_FORCE_PASSWORD, created);
+  const users = await Promise.all(sampleUsers.map((u) => upsertUser(u, false, created)));
 
   await Promise.all(
     settings.map((setting) =>
@@ -100,8 +161,15 @@ async function main() {
     ),
   );
 
+  const preAudit = await prisma.auditLog.count();
   await prisma.auditLog.deleteMany();
+  console.log(`[seed] Deleted ${preAudit} audit log records.`);
+
+  const preItems = await prisma.item.count();
   await prisma.item.deleteMany();
+  console.log(`[seed] Deleted ${preItems} item records.`);
+
+  const reporters = [admin, ...users];
 
   const sampleItems: Array<{
     itemName: string;
@@ -255,18 +323,31 @@ async function main() {
     });
   }
 
-  console.log('Seed complete.');
-  if (!process.env.SEED_ADMIN_PASSWORD) {
-    console.log(`Admin login: admin@nufv.edu / ${SEED_ADMIN_PASSWORD}  ← SAVE THIS; it will not be shown again.`);
-  } else {
-    console.log('Admin login: admin@nufv.edu / <SEED_ADMIN_PASSWORD env var>');
-  }
+  console.log(SB);
+  console.log('[seed] Seed complete.');
+  console.log(SB);
   console.log(`Created ${sampleItems.length} sample items and ${reporters.length} users.`);
+
+  for (const u of created) {
+    if (u.email === adminSeed.email) {
+      if (ADMIN_FORCE_PASSWORD) {
+        console.log(`Admin login: ${u.email} / <SEED_ADMIN_PASSWORD env var>`);
+      } else {
+        console.log(`Admin login: ${u.email} / ${u.password}  <- newly created; SAVE THIS; it will not be shown again.`);
+      }
+    } else {
+      console.log(`Sample user login: ${u.email} / ${u.password}  <- newly created; SAVE THIS; it will not be shown again.`);
+    }
+  }
+
+  if (created.length === 0) {
+    console.log('No new accounts created; existing seed accounts were left unchanged (passwords were NOT reset).');
+  }
 }
 
 main()
   .catch((error) => {
-    console.error('Seed failed:', error);
+    console.error('[seed] FAILED:', error instanceof Error ? error.message : error);
     process.exit(1);
   })
   .finally(async () => {
