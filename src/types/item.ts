@@ -3,7 +3,7 @@ export type ItemStatus = 'PENDING' | 'CLAIMED' | 'RETURNED' | 'DISPOSED';
 export interface ItemUserSummary {
   id: string;
   username: string;
-  email: string;
+  email?: string;
   firstName?: string | null;
   lastName?: string | null;
 }

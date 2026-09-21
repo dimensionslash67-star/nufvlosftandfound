@@ -4,6 +4,8 @@ import { DeleteItemButton } from '@/components/items/DeleteItemButton';
 import { ItemCard } from '@/components/items/ItemCard';
 import { ItemStatusBadge } from '@/components/items/ItemStatusBadge';
 import { RevealableName } from '@/components/ui/RevealableName';
+import { getAuthenticatedUserFromRequest } from '@/lib/admin';
+import { canManageItem } from '@/lib/itemVisibility';
 import { getItemById } from '@/lib/items';
 import { formatDisplayDate, getStoredClaimerName, getUserDisplayName } from '@/lib/utils';
 
@@ -11,13 +13,16 @@ export const dynamic = 'force-dynamic';
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const item = await getItemById(id);
+  const [item, currentUser] = await Promise.all([
+    getItemById(id),
+    getAuthenticatedUserFromRequest(),
+  ]);
 
   if (!item) {
     notFound();
   }
 
-  const canManage = true;
+  const canManage = canManageItem(currentUser, item.reporterId);
 
   return (
     <div className="space-y-6">
@@ -76,14 +81,16 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                 </dt>
                 <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">{item.location}</dd>
               </div>
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                  Contact Info
-                </dt>
-                <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
-                  {item.contactInfo || 'Not provided'}
-                </dd>
-              </div>
+              {canManage ? (
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    Contact Info
+                  </dt>
+                  <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
+                    {item.contactInfo || 'Not provided'}
+                  </dd>
+                </div>
+              ) : null}
               <div className="sm:col-span-2">
                 <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
                   Description
@@ -149,15 +156,17 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                     {formatDisplayDate(item.claimedAt, 'MMM d, yyyy h:mm a')}
                   </dd>
                 </div>
-                <div>
-                  <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    Student ID Number
-                  </dt>
-                  <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
-                    {item.claimerIdNumber || 'N/A'}
-                  </dd>
-                </div>
-                {item.relationshipToItem ? (
+                {canManage ? (
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                      Student ID Number
+                    </dt>
+                    <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
+                      {item.claimerIdNumber || 'N/A'}
+                    </dd>
+                  </div>
+                ) : null}
+                {canManage && item.relationshipToItem ? (
                   <div>
                     <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
                       Relationship To Item
@@ -167,7 +176,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                     </dd>
                   </div>
                 ) : null}
-                {item.verificationNotes ? (
+                {canManage && item.verificationNotes ? (
                   <div className="sm:col-span-2">
                     <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
                       Verification Notes

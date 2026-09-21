@@ -6,6 +6,7 @@ import { ItemStatusBadge } from '@/components/items/ItemStatusBadge';
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
 import { SurveyWidget } from '@/components/SurveyWidget';
+import { sanitizeItemForRestrictedView } from '@/lib/itemVisibility';
 import { getItemById } from '@/lib/items';
 import { formatDisplayDate, getUserDisplayName } from '@/lib/utils';
 
@@ -18,6 +19,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   if (!item || item.status !== 'PENDING' || item.isFlagged) {
     notFound();
   }
+
+  const publicItem = sanitizeItemForRestrictedView(item);
 
   return (
     <div className="min-h-screen bg-[#f8f9fa]">
@@ -89,7 +92,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                   Reported by {getUserDisplayName(item.reporter ?? undefined)}
                 </p>
                 <p className="mt-1">
-                  Contact info: {item.contactInfo || 'Available through the lost and found office.'}
+                  Contact info:{' '}
+                  {publicItem.contactInfo || 'Available through the lost and found office.'}
                 </p>
               </div>
               <div className="mt-5">

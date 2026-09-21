@@ -2,8 +2,10 @@ import { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuditLog } from '@/lib/audit';
 import { getAuthenticatedUserFromRequest } from '@/lib/auth';
+import { canManageItem, sanitizeItemForRestrictedView } from '@/lib/itemVisibility';
 import { prisma } from '@/lib/prisma';
 import { itemUpdateSchema } from '@/lib/validations';
+import type { Item } from '@/types/item';
 
 function normalizeOptionalString(value?: string) {
   const trimmed = value?.trim();
@@ -60,18 +62,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ message: 'Item not found.' }, { status: 404 });
     }
 
-    const isReporter = item.reporterId === currentUser.id;
-    const isAdmin = currentUser.role === 'ADMIN';
+    const canManage = canManageItem(currentUser, item.reporterId);
 
-    if (!isReporter && !isAdmin) {
-      const {
-        claimerIdNumber: _claimerIdNumber,
-        contactInfo: _contactInfo,
-        verificationNotes: _verificationNotes,
-        ...safeItem
-      } = item as any;
-
-      return NextResponse.json({ item: safeItem });
+    if (!canManage) {
+      return NextResponse.json({
+        item: sanitizeItemForRestrictedView(item as unknown as Item),
+      });
     }
 
     return NextResponse.json({ item });

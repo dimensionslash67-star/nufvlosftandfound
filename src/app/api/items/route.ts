@@ -3,9 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAuditLog } from '@/lib/audit';
 import { getAuthPayloadFromRequest, getAuthenticatedUserFromRequest } from '@/lib/auth';
 import { ITEMS_PER_PAGE } from '@/lib/constants';
+import { canManageItem, sanitizeItemForRestrictedView } from '@/lib/itemVisibility';
 import { generateItemCode } from '@/lib/itemCode';
 import { prisma } from '@/lib/prisma';
 import { itemQuerySchema, itemSchema } from '@/lib/validations';
+import type { Item } from '@/types/item';
 
 function normalizeOptionalString(value?: string) {
   const trimmed = value?.trim();
@@ -170,8 +172,15 @@ export async function GET(request: NextRequest) {
       prisma.item.count({ where }),
     ]);
 
+    const viewer = await getAuthenticatedUserFromRequest(request);
+    const safeItems = items.map((item) =>
+      canManageItem(viewer, item.reporterId)
+        ? item
+        : sanitizeItemForRestrictedView(item as unknown as Item),
+    );
+
     return NextResponse.json({
-      items,
+      items: safeItems,
       total: totalItems,
       pagination: {
         page: filters.page,

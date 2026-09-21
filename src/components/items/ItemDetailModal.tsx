@@ -74,7 +74,8 @@ export function ItemDetailModal({
             <div>
               <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Reported By</p>
               <p className="text-sm text-slate-700 dark:text-slate-200">
-                {item.reporter.username} ({item.reporter.email})
+                {item.reporter.username}
+                {item.reporter.email ? ` (${item.reporter.email})` : ''}
               </p>
             </div>
           ) : null}

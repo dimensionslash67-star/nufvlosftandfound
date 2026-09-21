@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { ITEMS_PER_PAGE } from './constants';
+import { sanitizeItemForRestrictedView } from './itemVisibility';
 import { prisma } from './prisma';
 import { itemQuerySchema } from './validations';
 import type { Item } from '@/types/item';
@@ -113,8 +114,12 @@ export async function getItemsPage(
       prisma.item.count({ where }),
     ]);
 
+    const sanitizedItems = defaults?.publicOnly
+      ? (items as unknown as Item[]).map((item) => sanitizeItemForRestrictedView(item))
+      : (items as unknown as Item[]);
+
     return {
-      items: items as unknown as Item[],
+      items: sanitizedItems,
       filters,
       pagination: {
         page: filters.page,
