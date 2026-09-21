@@ -12,7 +12,6 @@ type ClaimableItem = {
 };
 
 const initialForm = {
-  claimerName: '',
   studentIdNumber: '',
   relationshipToItem: '',
   verificationNotes: '',
@@ -48,7 +47,7 @@ export function ClaimItemModal({
       return;
     }
 
-    if (!formData.claimerName || !formData.studentIdNumber) {
+    if (!formData.studentIdNumber) {
       setError('Please fill in all required fields.');
       return;
     }
@@ -104,26 +103,15 @@ export function ClaimItemModal({
             </div>
           ) : null}
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <Input
-              error={!formData.claimerName && error ? 'Required' : undefined}
-              label="Claimer Full Name"
-              onChange={(event) =>
-                setFormData((current) => ({ ...current, claimerName: event.target.value }))
-              }
-              required
-              value={formData.claimerName}
-            />
-            <Input
-              error={!formData.studentIdNumber && error ? 'Required' : undefined}
-              label="Student ID Number"
-              onChange={(event) =>
-                setFormData((current) => ({ ...current, studentIdNumber: event.target.value }))
-              }
-              required
-              value={formData.studentIdNumber}
-            />
-          </div>
+          <Input
+            error={!formData.studentIdNumber && error ? 'Required' : undefined}
+            label="Student ID Number"
+            onChange={(event) =>
+              setFormData((current) => ({ ...current, studentIdNumber: event.target.value }))
+            }
+            required
+            value={formData.studentIdNumber}
+          />
 
           <Input
             label="Relationship to Item"

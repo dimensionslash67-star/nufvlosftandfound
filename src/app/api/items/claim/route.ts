@@ -12,7 +12,7 @@ function normalizeOptionalString(value?: string) {
 const claimSchema = z.object({
   itemId: z.string().min(1),
   claimData: z.object({
-    claimerName: z.string().trim().min(1),
+    claimerName: z.string().trim().min(1).optional(),
     studentIdNumber: z.string().trim().min(1),
     relationshipToItem: z.string().trim().optional().or(z.literal('')),
     verificationNotes: z.string().trim().optional().or(z.literal('')),
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       data: {
         status: 'CLAIMED',
         claimerId: null,
-        claimerName: parsed.data.claimData.claimerName.trim(),
+        claimerName: normalizeOptionalString(parsed.data.claimData.claimerName),
         claimerIdNumber: parsed.data.claimData.studentIdNumber.trim(),
         relationshipToItem: normalizeOptionalString(parsed.data.claimData.relationshipToItem),
         verificationNotes: normalizeOptionalString(parsed.data.claimData.verificationNotes),
