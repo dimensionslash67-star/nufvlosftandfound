@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuditLog } from '@/lib/audit';
 import { getAuthenticatedUserFromRequest } from '@/lib/auth';
-import { canManageItem, sanitizeItemForRestrictedView } from '@/lib/itemVisibility';
+import { projectItemForViewer } from '@/lib/itemVisibility';
 import { prisma } from '@/lib/prisma';
 import { itemUpdateSchema } from '@/lib/validations';
 import type { Item } from '@/types/item';
@@ -62,15 +62,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ message: 'Item not found.' }, { status: 404 });
     }
 
-    const canManage = canManageItem(currentUser, item.reporterId);
-
-    if (!canManage) {
-      return NextResponse.json({
-        item: sanitizeItemForRestrictedView(item as unknown as Item),
-      });
-    }
-
-    return NextResponse.json({ item });
+    return NextResponse.json({
+      item: projectItemForViewer(item as unknown as Item, currentUser),
+    });
   } catch (error) {
     console.error('Get item error:', error);
 

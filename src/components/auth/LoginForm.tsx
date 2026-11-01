@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ContactITSupportModal } from '@/components/auth/ContactITSupportModal';
 import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
+import { getSafeRedirect } from '@/lib/safeRedirect';
 import { loginIdentifierSchema } from '@/lib/validations';
 
 type LoginFormValues = z.infer<typeof loginIdentifierSchema>;
@@ -74,8 +75,7 @@ export function LoginForm() {
       return;
     }
 
-    const redirectTarget = searchParams.get('redirect');
-    router.push(redirectTarget || '/dashboard');
+    router.push(getSafeRedirect(searchParams.get('redirect')));
     router.refresh();
   });
 

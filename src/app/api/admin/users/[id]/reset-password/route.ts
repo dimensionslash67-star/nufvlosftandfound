@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createAuditLog } from '@/lib/audit';
 import { requireAdminPayload } from '@/lib/admin';
 import { hashPassword } from '@/lib/auth';
+import { invalidateResetTokens } from '@/lib/passwordReset';
 import { prisma } from '@/lib/prisma';
 
 const resetPasswordSchema = z.object({
@@ -47,12 +48,15 @@ export async function POST(
   try {
     const passwordHash = await hashPassword(parsed.data.newPassword);
 
-    await prisma.user.update({
-      where: { id },
-      data: {
-        password: passwordHash,
-        tokenVersion: { increment: 1 },
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id },
+        data: {
+          password: passwordHash,
+          tokenVersion: { increment: 1 },
+        },
+      });
+      await invalidateResetTokens(id, tx);
     });
 
     await createAuditLog({

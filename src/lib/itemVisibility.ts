@@ -1,4 +1,4 @@
-import type { Item, ItemUserSummary } from '@/types/item';
+import type { Item } from '@/types/item';
 
 export type ItemViewer = { id: string; role: string } | null | undefined;
 
@@ -17,32 +17,55 @@ export function canManageItem(
   return typeof reporterId === 'string' && viewer.id === reporterId;
 }
 
-function stripPersonEmail<T extends ItemUserSummary>(
-  person: T,
-): Omit<T, 'email'> {
-  const { email: _email, ...safePerson } = person;
-  return safePerson;
+export type PublicItemProjection = {
+  id: string;
+  itemCode: string | null;
+  itemName: string;
+  category: string;
+  location: string;
+  dateReported: Item['dateReported'];
+  status: Item['status'];
+  imageUrl: string | null;
+};
+
+export type RestrictedItemProjection = PublicItemProjection & {
+  reporter?: {
+    firstName: string | null;
+    lastName: string | null;
+  };
+};
+
+export function projectPublicItem(item: Item): PublicItemProjection {
+  return {
+    id: item.id,
+    itemCode: item.itemCode ?? null,
+    itemName: item.itemName,
+    category: item.category,
+    location: item.location,
+    dateReported: item.dateReported,
+    status: item.status,
+    imageUrl: item.imageUrl ?? null,
+  };
 }
 
-export function sanitizeItemForRestrictedView<TItem extends Item>(item: TItem): TItem {
-  if (!item) {
+export function projectRestrictedItem(item: Item): RestrictedItemProjection {
+  return {
+    ...projectPublicItem(item),
+    ...(item.reporter
+      ? {
+          reporter: {
+            firstName: item.reporter.firstName ?? null,
+            lastName: item.reporter.lastName ?? null,
+          },
+        }
+      : {}),
+  };
+}
+
+export function projectItemForViewer(item: Item, viewer: ItemViewer) {
+  if (canManageItem(viewer, item.reporterId)) {
     return item;
   }
 
-  const sanitized = { ...item } as Item;
-
-  delete (sanitized as Partial<Item>).contactInfo;
-  delete (sanitized as Partial<Item>).claimerIdNumber;
-  delete (sanitized as Partial<Item>).relationshipToItem;
-  delete (sanitized as Partial<Item>).verificationNotes;
-
-  if (sanitized.reporter) {
-    sanitized.reporter = stripPersonEmail(sanitized.reporter);
-  }
-
-  if (sanitized.claimer) {
-    sanitized.claimer = stripPersonEmail(sanitized.claimer);
-  }
-
-  return sanitized as TItem;
+  return viewer ? projectRestrictedItem(item) : projectPublicItem(item);
 }

@@ -7,22 +7,38 @@ import {
   getAuthCookieOptions,
 } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import {
+  checkRateLimit,
+  getClientIp,
+  getRateLimitFailure,
+  normalizeRateLimitKey,
+} from '@/lib/rateLimit';
 import { loginIdentifierSchema } from '@/lib/validations';
 
-// 10 login attempts per 15 minutes per IP
-const LOGIN_LIMIT = 10;
+// Preserve the existing healthy Redis limit for IPs; fallback is stricter per instance.
+const LOGIN_IP_LIMIT = 10;
+const LOGIN_FALLBACK_LIMIT = 5;
+// Five login attempts per 15 minutes per normalized account identifier.
+const LOGIN_ACCOUNT_LIMIT = 5;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 
 export async function POST(request: Request) {
   const ip = getClientIp(request);
-  const rl = await checkRateLimit(`login:${ip}`, LOGIN_LIMIT, LOGIN_WINDOW_MS);
-  if (!rl.allowed) {
+  const ipRateLimit = await checkRateLimit(`login:ip:${ip}`, LOGIN_IP_LIMIT, LOGIN_WINDOW_MS, {
+    failMode: 'fallback',
+    fallbackLimit: LOGIN_FALLBACK_LIMIT,
+  });
+  const ipFailure = getRateLimitFailure(
+    ipRateLimit,
+    'Too many login attempts. Please try again later.',
+  );
+
+  if (ipFailure) {
     return NextResponse.json(
-      { message: 'Too many login attempts. Please try again later.' },
+      { message: ipFailure.message },
       {
-        status: 429,
-        headers: { 'Retry-After': String(Math.ceil(rl.resetMs / 1000)) },
+        status: ipFailure.status,
+        headers: { 'Retry-After': String(ipFailure.retryAfter) },
       },
     );
   }
@@ -42,8 +58,29 @@ export async function POST(request: Request) {
     }
 
     const identifier = parsed.data.email.trim();
-    const normalizedEmail = identifier.toLowerCase();
+    const normalizedEmail = normalizeRateLimitKey(identifier);
     const isEmailLogin = identifier.includes('@');
+
+    const accountRateLimit = await checkRateLimit(
+      `login:account:${normalizedEmail}`,
+      LOGIN_ACCOUNT_LIMIT,
+      LOGIN_WINDOW_MS,
+      { failMode: 'fallback' },
+    );
+    const accountFailure = getRateLimitFailure(
+      accountRateLimit,
+      'Too many login attempts. Please try again later.',
+    );
+
+    if (accountFailure) {
+      return NextResponse.json(
+        { message: accountFailure.message },
+        {
+          status: accountFailure.status,
+          headers: { 'Retry-After': String(accountFailure.retryAfter) },
+        },
+      );
+    }
 
     const user = await prisma.user.findFirst({
       where: {

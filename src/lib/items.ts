@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { ITEMS_PER_PAGE } from './constants';
-import { sanitizeItemForRestrictedView } from './itemVisibility';
+import { getCurrentUser } from './auth';
+import { projectPublicItem } from './itemVisibility';
 import { prisma } from './prisma';
 import { itemQuerySchema } from './validations';
 import type { Item } from '@/types/item';
@@ -11,10 +12,13 @@ function readParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-export function parseItemFilters(searchParams: RawSearchParams, defaults?: { status?: string }) {
+export function parseItemFilters(
+  searchParams: RawSearchParams,
+  defaults?: { status?: string; publicOnly?: boolean },
+) {
   return itemQuerySchema.parse({
     page: readParam(searchParams.page),
-    status: readParam(searchParams.status) ?? defaults?.status,
+    status: defaults?.publicOnly ? 'PENDING' : readParam(searchParams.status) ?? defaults?.status,
     category: readParam(searchParams.category),
     search: readParam(searchParams.search),
     location: readParam(searchParams.location),
@@ -30,7 +34,9 @@ export function buildItemWhere(
   const filters = parseItemFilters(searchParams, defaults);
   const where: Prisma.ItemWhereInput = {};
 
-  if (filters.status) {
+  if (defaults?.publicOnly) {
+    where.status = 'PENDING';
+  } else if (filters.status) {
     where.status = filters.status;
   }
 
@@ -39,14 +45,22 @@ export function buildItemWhere(
   }
 
   if (filters.search) {
-    where.OR = [
-      { id: { contains: filters.search, mode: 'insensitive' } },
+    const searchClauses: Prisma.ItemWhereInput[] = [
       { itemCode: { contains: filters.search, mode: 'insensitive' } },
       { itemName: { contains: filters.search, mode: 'insensitive' } },
       { description: { contains: filters.search, mode: 'insensitive' } },
       { location: { contains: filters.search, mode: 'insensitive' } },
-      { contactInfo: { contains: filters.search, mode: 'insensitive' } },
+      { category: { contains: filters.search, mode: 'insensitive' } },
     ];
+
+    if (!defaults?.publicOnly) {
+      searchClauses.push(
+        { id: { contains: filters.search, mode: 'insensitive' } },
+        { contactInfo: { contains: filters.search, mode: 'insensitive' } },
+      );
+    }
+
+    where.OR = searchClauses;
   }
 
   if (filters.location) {
@@ -78,10 +92,15 @@ export async function getItemsPage(
   searchParams: RawSearchParams,
   defaults?: { status?: string; take?: number; publicOnly?: boolean },
 ) {
+  let publicOnly = defaults?.publicOnly === true;
+
   try {
-    const filters = parseItemFilters(searchParams, defaults);
+    const currentUser = await getCurrentUser();
+    publicOnly = publicOnly || !currentUser;
+    const effectiveDefaults = { ...defaults, publicOnly };
+    const filters = parseItemFilters(searchParams, effectiveDefaults);
     const pageSize = defaults?.take ?? ITEMS_PER_PAGE;
-    const where = buildItemWhere(searchParams, defaults);
+    const where = buildItemWhere(searchParams, effectiveDefaults);
     const skip = (filters.page - 1) * pageSize;
 
     const [items, totalItems] = await Promise.all([
@@ -114,8 +133,8 @@ export async function getItemsPage(
       prisma.item.count({ where }),
     ]);
 
-    const sanitizedItems = defaults?.publicOnly
-      ? (items as unknown as Item[]).map((item) => sanitizeItemForRestrictedView(item))
+    const sanitizedItems = publicOnly
+      ? items.map((item) => projectPublicItem(item as unknown as Item) as unknown as Item)
       : (items as unknown as Item[]);
 
     return {
@@ -130,7 +149,7 @@ export async function getItemsPage(
     };
   } catch (error) {
     console.error('getItemsPage error:', error);
-    const filters = parseItemFilters(searchParams, defaults);
+    const filters = parseItemFilters(searchParams, { ...defaults, publicOnly });
     const pageSize = defaults?.take ?? ITEMS_PER_PAGE;
     return {
       items: [],
@@ -174,6 +193,50 @@ export async function getItemById(id: string) {
     return item as unknown as Item | null;
   } catch (error) {
     console.error('getItemById error:', error);
+    return null;
+  }
+}
+
+export async function getEditableItemById(
+  id: string,
+  viewer: { id: string; role: string },
+) {
+  try {
+    const item = await prisma.item.findFirst({
+      where: {
+        id,
+        OR: viewer.role?.toString().trim().toUpperCase() === 'ADMIN'
+          ? undefined
+          : [{ reporterId: viewer.id }],
+      },
+      select: {
+        id: true,
+        itemCode: true,
+        itemName: true,
+        description: true,
+        category: true,
+        location: true,
+        contactInfo: true,
+        imageUrl: true,
+      },
+    });
+
+    if (!item) {
+      return null;
+    }
+
+    return {
+      id: item.id,
+      itemCode: item.itemCode,
+      itemName: item.itemName,
+      description: item.description,
+      category: item.category,
+      location: item.location,
+      contactInfo: item.contactInfo,
+      imageUrl: item.imageUrl,
+    };
+  } catch (error) {
+    console.error('getEditableItemById error:', error);
     return null;
   }
 }

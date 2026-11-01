@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuditLog } from '@/lib/audit';
-import { getOwnerUser, requireOwnerPinAccess, updateOwnerPin, verifyOwnerPin } from '@/lib/ownerGuard';
+import { prisma } from '@/lib/prisma';
+import {
+  getOwnerUser,
+  incrementOwnerPinSessionVersion,
+  requireOwnerPinAccess,
+  updateOwnerPin,
+  verifyOwnerPin,
+} from '@/lib/ownerGuard';
 
 export async function POST(request: NextRequest) {
   const guard = await requireOwnerPinAccess();
@@ -43,7 +50,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Current PIN is incorrect.' }, { status: 401 });
   }
 
-  await updateOwnerPin(body.newPin);
+  const newPin = body.newPin;
+  await prisma.$transaction(async (tx) => {
+    await updateOwnerPin(newPin, tx);
+    await incrementOwnerPinSessionVersion(tx);
+  });
 
   await createAuditLog({
     userId: owner.id,

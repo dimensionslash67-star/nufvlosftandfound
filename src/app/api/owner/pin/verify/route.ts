@@ -9,7 +9,7 @@ import {
   updateOwnerPin,
   verifyOwnerPin,
 } from '@/lib/ownerGuard';
-import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { checkRateLimit, getClientIp, getRateLimitFailure } from '@/lib/rateLimit';
 
 // Strict limit: 5 PIN attempts per 15 minutes per IP.
 // The 4-digit PIN space is only 10,000 combinations — brute force must be blocked hard.
@@ -29,13 +29,17 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
-  const rl = await checkRateLimit(`owner-pin:${ip}`, PIN_LIMIT, PIN_WINDOW_MS);
-  if (!rl.allowed) {
+  const rl = await checkRateLimit(`owner-pin:${ip}`, PIN_LIMIT, PIN_WINDOW_MS, {
+    failMode: 'closed',
+  });
+  const failure = getRateLimitFailure(rl, 'Too many PIN attempts. Please try again later.');
+
+  if (failure) {
     return NextResponse.json(
-      { message: 'Too many PIN attempts. Please try again later.' },
+      { message: failure.message },
       {
-        status: 429,
-        headers: { 'Retry-After': String(Math.ceil(rl.resetMs / 1000)) },
+        status: failure.status,
+        headers: { 'Retry-After': String(failure.retryAfter) },
       },
     );
   }
@@ -65,6 +69,9 @@ export async function POST(request: NextRequest) {
     // Initial PIN setup flow: set up PIN for the first time
     await updateOwnerPin(pin);
     const token = await createOwnerPinSession(owner.id);
+    if (!token) {
+      return NextResponse.json({ message: 'Unable to establish owner PIN session.' }, { status: 503 });
+    }
     const response = NextResponse.json({ message: 'Owner PIN setup complete.', isPinSet: true });
     response.cookies.set(getOwnerPinCookieName(), token, getOwnerPinCookieOptions());
     return response;
@@ -77,6 +84,9 @@ export async function POST(request: NextRequest) {
   }
 
   const token = await createOwnerPinSession(owner.id);
+  if (!token) {
+    return NextResponse.json({ message: 'Unable to establish owner PIN session.' }, { status: 503 });
+  }
   const response = NextResponse.json({ message: 'Owner PIN verified.' });
   response.cookies.set(getOwnerPinCookieName(), token, getOwnerPinCookieOptions());
   return response;

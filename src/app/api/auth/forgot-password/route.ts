@@ -3,7 +3,12 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { generatePasswordResetEmail, getAppUrl, sendEmail } from '@/lib/email';
 import { prisma } from '@/lib/prisma';
-import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import {
+  checkRateLimit,
+  getClientIp,
+  getRateLimitFailure,
+  normalizeRateLimitKey,
+} from '@/lib/rateLimit';
 
 const forgotPasswordSchema = z.object({
   email: z.string().trim().email('A valid email address is required.'),
@@ -18,13 +23,20 @@ const FORGOT_WINDOW_MS = 60 * 60 * 1000;
 
 export async function POST(request: Request) {
   const ip = getClientIp(request);
-  const rl = await checkRateLimit(`forgot:${ip}`, FORGOT_LIMIT, FORGOT_WINDOW_MS);
-  if (!rl.allowed) {
+  const ipRateLimit = await checkRateLimit(`forgot:ip:${ip}`, FORGOT_LIMIT, FORGOT_WINDOW_MS, {
+    failMode: 'closed',
+  });
+  const ipFailure = getRateLimitFailure(
+    ipRateLimit,
+    'Too many password reset requests. Please try again later.',
+  );
+
+  if (ipFailure) {
     return NextResponse.json(
-      { message: 'Too many password reset requests. Please try again later.' },
+      { message: ipFailure.message },
       {
-        status: 429,
-        headers: { 'Retry-After': String(Math.ceil(rl.resetMs / 1000)) },
+        status: ipFailure.status,
+        headers: { 'Retry-After': String(ipFailure.retryAfter) },
       },
     );
   }
@@ -40,7 +52,28 @@ export async function POST(request: Request) {
       );
     }
 
-    const normalizedEmail = parsed.data.email.toLowerCase();
+    const normalizedEmail = normalizeRateLimitKey(parsed.data.email);
+    const accountRateLimit = await checkRateLimit(
+      `forgot:account:${normalizedEmail}`,
+      FORGOT_LIMIT,
+      FORGOT_WINDOW_MS,
+      { failMode: 'closed' },
+    );
+    const accountFailure = getRateLimitFailure(
+      accountRateLimit,
+      'Too many password reset requests. Please try again later.',
+    );
+
+    if (accountFailure) {
+      return NextResponse.json(
+        { message: accountFailure.message },
+        {
+          status: accountFailure.status,
+          headers: { 'Retry-After': String(accountFailure.retryAfter) },
+        },
+      );
+    }
+
     const user = await prisma.user.findUnique({
       where: { email: normalizedEmail },
       select: { id: true, email: true, isActive: true },

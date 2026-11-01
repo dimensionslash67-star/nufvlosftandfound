@@ -1,12 +1,19 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { ItemForm } from '@/components/items/ItemForm';
-import { getItemById } from '@/lib/items';
+import { getCurrentUser } from '@/lib/auth';
+import { getEditableItemById } from '@/lib/items';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const item = await getItemById(id);
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    redirect('/login');
+  }
+
+  const item = await getEditableItemById(id, currentUser);
 
   if (!item) {
     notFound();
