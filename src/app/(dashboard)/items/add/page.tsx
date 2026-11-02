@@ -1,13 +1,9 @@
 import { LegacyAddItemForm } from '@/components/items/LegacyAddItemForm';
-import { getCurrentUser } from '@/lib/auth';
 import { submitLegacyAddItem } from './actions';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Page() {
-  const currentUser = await getCurrentUser();
-  const submitAction = submitLegacyAddItem.bind(null, currentUser?.id ?? null);
-
   return (
     <div className="space-y-6">
       <div>
@@ -20,7 +16,7 @@ export default async function Page() {
         </p>
       </div>
 
-      <LegacyAddItemForm submitAction={submitAction} />
+      <LegacyAddItemForm submitAction={submitLegacyAddItem} />
     </div>
   );
 }

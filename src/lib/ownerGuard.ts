@@ -13,9 +13,13 @@ import {
   OWNER_PIN_COOKIE_NAME,
   OWNER_PIN_MAX_AGE,
   OWNER_PIN_SETTING_KEY,
+  OWNER_PIN_SESSION_VERSION_KEY,
   normalizeEmail,
 } from './owner';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import { prisma } from './prisma';
+
+type OwnerSettingsDatabase = Pick<PrismaClient, 'setting'> | Prisma.TransactionClient;
 
 export function getOwnerPinCookieName() {
   return OWNER_PIN_COOKIE_NAME;
@@ -49,6 +53,47 @@ export async function getOwnerPinSetting() {
 export async function isOwnerPinSet() {
   const setting = await getOwnerPinSetting();
   return Boolean(setting?.value && setting.value.trim().length > 0);
+}
+
+export async function getOwnerPinSessionVersion(
+  db: OwnerSettingsDatabase = prisma,
+): Promise<number | null> {
+  try {
+    const setting = await db.setting.findUnique({
+      where: { key: OWNER_PIN_SESSION_VERSION_KEY },
+    });
+
+    if (!setting) {
+      return 0;
+    }
+
+    const version = Number(setting.value.trim());
+    if (!Number.isInteger(version) || version < 0) {
+      console.error('[ownerGuard] Invalid owner PIN session version; denying access.');
+      return null;
+    }
+
+    return version;
+  } catch (error) {
+    console.error('[ownerGuard] Failed to load owner PIN session version; denying access.', error);
+    return null;
+  }
+}
+
+export async function incrementOwnerPinSessionVersion(db: OwnerSettingsDatabase = prisma) {
+  const currentVersion = await getOwnerPinSessionVersion(db);
+  if (currentVersion === null) {
+    throw new Error('Owner PIN session version could not be read.');
+  }
+
+  const nextVersion = currentVersion + 1;
+  await db.setting.upsert({
+    where: { key: OWNER_PIN_SESSION_VERSION_KEY },
+    update: { value: String(nextVersion) },
+    create: { key: OWNER_PIN_SESSION_VERSION_KEY, value: String(nextVersion) },
+  });
+
+  return nextVersion;
 }
 
 export async function isOwnerUser(user: { id: string; email: string; role: string; isActive: boolean }) {
@@ -166,7 +211,16 @@ export async function hasOwnerPinSession(expectedUserId?: string, request?: Next
     return false;
   }
 
-  return expectedUserId ? payload.userId === expectedUserId : true;
+  if (expectedUserId && payload.userId !== expectedUserId) {
+    return false;
+  }
+
+  const currentVersion = await getOwnerPinSessionVersion();
+  if (currentVersion === null || payload.pv !== currentVersion) {
+    return false;
+  }
+
+  return true;
 }
 
 export async function requireOwnerPinAccess(request?: NextRequest) {
@@ -198,10 +252,10 @@ export async function verifyOwnerPin(pin: string) {
   return comparePassword(pin, setting.value);
 }
 
-export async function updateOwnerPin(pin: string) {
+export async function updateOwnerPin(pin: string, db: OwnerSettingsDatabase = prisma) {
   const hashedPin = await hashPassword(pin);
 
-  return prisma.setting.upsert({
+  return db.setting.upsert({
     where: {
       key: OWNER_PIN_SETTING_KEY,
     },
@@ -222,5 +276,10 @@ export async function deleteOwnerPin() {
 }
 
 export async function createOwnerPinSession(userId: string) {
-  return createOwnerPinJWT(userId);
+  const pinSessionVersion = await getOwnerPinSessionVersion();
+  if (pinSessionVersion === null) {
+    return null;
+  }
+
+  return createOwnerPinJWT(userId, pinSessionVersion);
 }

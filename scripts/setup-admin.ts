@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { hashPassword } from '../src/lib/auth';
+import { invalidateResetTokens } from '../src/lib/passwordReset';
 
 const prisma = new PrismaClient();
 
@@ -14,21 +15,27 @@ async function main() {
   const hashedPassword = await hashPassword(password);
   const username = email.split('@')[0];
 
-  const user = await prisma.user.upsert({
-    where: { email },
-    update: {
-      password: hashedPassword,
-      role: 'ADMIN',
-      isActive: true,
-      username,
-    },
-    create: {
-      email,
-      username,
-      password: hashedPassword,
-      role: 'ADMIN',
-      isActive: true,
-    },
+  const user = await prisma.$transaction(async (tx) => {
+    const upsertedUser = await tx.user.upsert({
+      where: { email },
+      update: {
+        password: hashedPassword,
+        tokenVersion: { increment: 1 },
+        role: 'ADMIN',
+        isActive: true,
+        username,
+      },
+      create: {
+        email,
+        username,
+        password: hashedPassword,
+        role: 'ADMIN',
+        isActive: true,
+      },
+    });
+
+    await invalidateResetTokens(upsertedUser.id, tx);
+    return upsertedUser;
   });
 
   console.log(`Admin user ready: ${user.email}`);

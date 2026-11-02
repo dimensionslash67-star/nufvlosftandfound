@@ -1,9 +1,9 @@
 import { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuditLog } from '@/lib/audit';
-import { getAuthPayloadFromRequest, getAuthenticatedUserFromRequest } from '@/lib/auth';
+import { getAuthenticatedUserFromRequest } from '@/lib/auth';
 import { ITEMS_PER_PAGE } from '@/lib/constants';
-import { canManageItem, sanitizeItemForRestrictedView } from '@/lib/itemVisibility';
+import { projectItemForViewer } from '@/lib/itemVisibility';
 import { generateItemCode } from '@/lib/itemCode';
 import { prisma } from '@/lib/prisma';
 import { itemQuerySchema, itemSchema } from '@/lib/validations';
@@ -135,11 +135,11 @@ function buildItemWhere(
 
 export async function GET(request: NextRequest) {
   try {
-    const payload = await getAuthPayloadFromRequest(request);
+    const viewer = await getAuthenticatedUserFromRequest(request);
     const rawFilters = readRawFilters(request);
     const filters = itemQuerySchema.parse(rawFilters);
     const pageSize = filters.pageSize ?? ITEMS_PER_PAGE;
-    const where = buildItemWhere(filters, { publicOnly: !payload?.userId });
+    const where = buildItemWhere(filters, { publicOnly: !viewer });
     const skip = (filters.page - 1) * pageSize;
 
     const [items, totalItems] = await Promise.all([
@@ -172,11 +172,8 @@ export async function GET(request: NextRequest) {
       prisma.item.count({ where }),
     ]);
 
-    const viewer = await getAuthenticatedUserFromRequest(request);
     const safeItems = items.map((item) =>
-      canManageItem(viewer, item.reporterId)
-        ? item
-        : sanitizeItemForRestrictedView(item as unknown as Item),
+      projectItemForViewer(item as unknown as Item, viewer),
     );
 
     return NextResponse.json({

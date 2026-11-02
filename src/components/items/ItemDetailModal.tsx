@@ -1,6 +1,6 @@
 'use client';
 
-import { formatDisplayDate, getStoredClaimerName } from '@/lib/utils';
+import { formatDisplayDate, getUserDisplayName } from '@/lib/utils';
 import type { Item } from '@/types/item';
 import { Modal } from '@/components/ui/Modal';
 import { RevealableName } from '@/components/ui/RevealableName';
@@ -74,8 +74,7 @@ export function ItemDetailModal({
             <div>
               <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Reported By</p>
               <p className="text-sm text-slate-700 dark:text-slate-200">
-                {item.reporter.username}
-                {item.reporter.email ? ` (${item.reporter.email})` : ''}
+                {getUserDisplayName(item.reporter)}
               </p>
             </div>
           ) : null}
@@ -85,20 +84,32 @@ export function ItemDetailModal({
               <div>
                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Claimer</p>
                 <p className="text-sm font-semibold text-slate-900 dark:text-[#f1f5f9]">
-                  <RevealableName fullName={getStoredClaimerName(item)} />
+                  {item.claimerName ? (
+                    <RevealableName fullName={item.claimerName} />
+                  ) : (
+                    'Claimed'
+                  )}
                 </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Student ID Number</p>
-                  <p className="text-sm text-slate-700 dark:text-slate-200">{item.claimerIdNumber || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Claimed At</p>
-                  <p className="text-sm text-slate-700 dark:text-slate-200">
-                    {formatDisplayDate(item.claimedAt, 'MMM d, yyyy h:mm a')}
-                  </p>
-                </div>
+                {item.claimerIdNumber ? (
+                  <div>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                      Student ID Number
+                    </p>
+                    <p className="text-sm text-slate-700 dark:text-slate-200">{item.claimerIdNumber}</p>
+                  </div>
+                ) : null}
+                {item.claimedAt ? (
+                  <div>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                      Claimed At
+                    </p>
+                    <p className="text-sm text-slate-700 dark:text-slate-200">
+                      {formatDisplayDate(item.claimedAt, 'MMM d, yyyy h:mm a')}
+                    </p>
+                  </div>
+                ) : null}
                 {item.relationshipToItem ? (
                   <div className="sm:col-span-2">
                     <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Relationship to Item</p>

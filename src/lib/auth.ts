@@ -16,6 +16,7 @@ export type AuthJWTPayload = JWTPayload & {
 export type OwnerPinJWTPayload = JWTPayload & {
   scope: 'owner-pin';
   userId: string;
+  pv: number;
 };
 
 export type AuthenticatedUser = {
@@ -127,10 +128,11 @@ export async function createJWT(payload: {
     .sign(getJWTSecret());
 }
 
-export async function createOwnerPinJWT(userId: string): Promise<string> {
+export async function createOwnerPinJWT(userId: string, pinSessionVersion: number): Promise<string> {
   return new SignJWT({
     scope: 'owner-pin',
     userId,
+    pv: pinSessionVersion,
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(userId)
@@ -154,7 +156,7 @@ export async function verifyJWT(token: string): Promise<AuthJWTPayload | null> {
       !Number.isInteger(tokenVersion) ||
       tokenVersion < 0
     ) {
-      console.error('JWT payload missing required fields:', verifiedPayload);
+      console.error('[auth] Token validation failed.');
       return null;
     }
 
@@ -163,7 +165,7 @@ export async function verifyJWT(token: string): Promise<AuthJWTPayload | null> {
     if (
       !(error instanceof Error && 'code' in error && error.code === 'ERR_JWT_EXPIRED')
     ) {
-      console.error('JWT verification failed:', error);
+      console.error('[auth] JWT verification failed.');
     }
 
     return null;
@@ -175,13 +177,19 @@ export async function verifyOwnerPinJWT(token: string): Promise<OwnerPinJWTPaylo
     const { payload } = await jwtVerify(token, getJWTSecret());
     const verifiedPayload = payload as Partial<OwnerPinJWTPayload>;
 
-    if (verifiedPayload.scope !== 'owner-pin' || !verifiedPayload.userId) {
+    if (
+      verifiedPayload.scope !== 'owner-pin' ||
+      !verifiedPayload.userId ||
+      typeof verifiedPayload.pv !== 'number' ||
+      !Number.isInteger(verifiedPayload.pv) ||
+      verifiedPayload.pv < 0
+    ) {
       return null;
     }
 
     return verifiedPayload as OwnerPinJWTPayload;
   } catch (error) {
-    console.error('Owner PIN JWT verification failed:', error);
+    console.error('[auth] Owner PIN token validation failed.');
     return null;
   }
 }
@@ -245,14 +253,7 @@ async function getAuthenticatedUserById(
   return user;
 }
 
-export async function getCurrentUser() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(getAuthCookieName())?.value;
-
-  if (!token) {
-    return null;
-  }
-
+export async function getAuthenticatedUserFromToken(token: string) {
   const payload = await verifyJWT(token);
 
   if (!payload?.userId) {
@@ -265,6 +266,17 @@ export async function getCurrentUser() {
     console.error('Database lookup failed during auth verification:', error);
     return null;
   }
+}
+
+export async function getCurrentUser() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(getAuthCookieName())?.value;
+
+  if (!token) {
+    return null;
+  }
+
+  return getAuthenticatedUserFromToken(token);
 }
 
 export async function getAuthenticatedUserFromRequest(request: NextRequest) {

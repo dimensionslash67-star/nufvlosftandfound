@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAuditLog } from '@/lib/audit';
 import { createJWT, getAuthCookieName, getAuthCookieOptions, hashPassword } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { checkRateLimit, getClientIp, getRateLimitFailure } from '@/lib/rateLimit';
 import { registerSchema } from '@/lib/validations';
 
 function normalizeOptionalString(value?: string) {
@@ -16,13 +16,20 @@ const REGISTER_WINDOW_MS = 15 * 60 * 1000;
 
 export async function POST(request: Request) {
   const ip = getClientIp(request);
-  const rl = await checkRateLimit(`register:${ip}`, REGISTER_LIMIT, REGISTER_WINDOW_MS);
-  if (!rl.allowed) {
+  const rl = await checkRateLimit(`register:${ip}`, REGISTER_LIMIT, REGISTER_WINDOW_MS, {
+    failMode: 'closed',
+  });
+  const failure = getRateLimitFailure(
+    rl,
+    'Too many registration attempts. Please try again later.',
+  );
+
+  if (failure) {
     return NextResponse.json(
-      { message: 'Too many registration attempts. Please try again later.' },
+      { message: failure.message },
       {
-        status: 429,
-        headers: { 'Retry-After': String(Math.ceil(rl.resetMs / 1000)) },
+        status: failure.status,
+        headers: { 'Retry-After': String(failure.retryAfter) },
       },
     );
   }

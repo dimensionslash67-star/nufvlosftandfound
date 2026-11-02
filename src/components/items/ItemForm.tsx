@@ -13,6 +13,10 @@ import type { Item } from '@/types/item';
 import { ImageUpload } from './ImageUpload';
 
 type ItemFormValues = z.infer<typeof itemSchema>;
+type EditableItem = Pick<
+  Item,
+  'id' | 'itemCode' | 'itemName' | 'description' | 'category' | 'location' | 'contactInfo' | 'imageUrl'
+>;
 
 export function ItemForm({
   canDelete = false,
@@ -20,7 +24,7 @@ export function ItemForm({
   mode,
 }: {
   canDelete?: boolean;
-  item?: Partial<Item>;
+  item?: Partial<EditableItem>;
   mode: 'create' | 'edit';
 }) {
   const router = useRouter();
@@ -132,13 +136,12 @@ export function ItemForm({
   };
 
   const deleteModalItem =
-    mode === 'edit' && item?.id && item.itemName && item.reporterId
+    mode === 'edit' && item?.id && item.itemName
       ? {
           id: item.id,
           itemCode: item.itemCode ?? null,
           itemName: item.itemName,
-          reporterId: item.reporterId,
-          reporter: item.reporter,
+          reporterId: '',
         }
       : null;
 

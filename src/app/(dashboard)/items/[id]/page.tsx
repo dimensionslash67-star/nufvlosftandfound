@@ -5,24 +5,25 @@ import { ItemCard } from '@/components/items/ItemCard';
 import { ItemStatusBadge } from '@/components/items/ItemStatusBadge';
 import { RevealableName } from '@/components/ui/RevealableName';
 import { getAuthenticatedUserFromRequest } from '@/lib/admin';
-import { canManageItem } from '@/lib/itemVisibility';
+import { canManageItem, projectItemForViewer } from '@/lib/itemVisibility';
 import { getItemById } from '@/lib/items';
-import { formatDisplayDate, getStoredClaimerName, getUserDisplayName } from '@/lib/utils';
+import { formatDisplayDate, getUserDisplayName } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [item, currentUser] = await Promise.all([
+  const [loadedItem, currentUser] = await Promise.all([
     getItemById(id),
     getAuthenticatedUserFromRequest(),
   ]);
 
-  if (!item) {
+  if (!loadedItem) {
     notFound();
   }
 
-  const canManage = canManageItem(currentUser, item.reporterId);
+  const canManage = canManageItem(currentUser, loadedItem.reporterId);
+  const item = projectItemForViewer(loadedItem, currentUser) as import('@/types/item').Item;
 
   return (
     <div className="space-y-6">
@@ -91,14 +92,16 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                   </dd>
                 </div>
               ) : null}
-              <div className="sm:col-span-2">
-                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                  Description
-                </dt>
-                <dd className="mt-1 whitespace-pre-wrap text-slate-900 dark:text-[#f1f5f9]">
-                  {item.description || 'No description provided.'}
-                </dd>
-              </div>
+              {canManage ? (
+                <div className="sm:col-span-2">
+                  <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    Description
+                  </dt>
+                  <dd className="mt-1 whitespace-pre-wrap text-slate-900 dark:text-[#f1f5f9]">
+                    {item.description || 'No description provided.'}
+                  </dd>
+                </div>
+              ) : null}
             </dl>
           </section>
 
@@ -115,26 +118,30 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                   {getUserDisplayName(item.reporter ?? undefined)}
                 </dd>
               </div>
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                  Created At
-                </dt>
-                <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
-                  {formatDisplayDate(item.createdAt)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                  Updated At
-                </dt>
-                <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
-                  {formatDisplayDate(item.updatedAt)}
-                </dd>
-              </div>
+              {canManage ? (
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    Created At
+                  </dt>
+                  <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
+                    {formatDisplayDate(item.createdAt)}
+                  </dd>
+                </div>
+              ) : null}
+              {canManage ? (
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    Updated At
+                  </dt>
+                  <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
+                    {formatDisplayDate(item.updatedAt)}
+                  </dd>
+                </div>
+              ) : null}
             </dl>
           </section>
 
-          {item.status === 'CLAIMED' ? (
+          {canManage && item.status === 'CLAIMED' ? (
             <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)] dark:border-[#334155] dark:bg-[#1e293b]">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-[#f1f5f9]">
                 Claim Details
@@ -145,7 +152,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                     Claimer
                   </dt>
                   <dd className="mt-1 text-slate-900 dark:text-[#f1f5f9]">
-                    <RevealableName fullName={getStoredClaimerName(item)} />
+                    <RevealableName fullName={item.claimerName} />
                   </dd>
                 </div>
                 <div>

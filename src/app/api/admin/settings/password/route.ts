@@ -10,6 +10,7 @@ import {
   hashPassword,
 } from '@/lib/auth';
 import { requireAdminPayload } from '@/lib/admin';
+import { invalidateResetTokens } from '@/lib/passwordReset';
 import { prisma } from '@/lib/prisma';
 
 const passwordSchema = z
@@ -61,21 +62,26 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ message: 'Current password is incorrect.' }, { status: 400 });
     }
 
-    const updatedUser = await prisma.user.update({
-      where: {
-        id: admin.userId,
-      },
-      data: {
-        password: await hashPassword(parsed.data.newPassword),
-        tokenVersion: { increment: 1 },
-      },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        role: true,
-        tokenVersion: true,
-      },
+    const passwordHash = await hashPassword(parsed.data.newPassword);
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: {
+          id: admin.userId,
+        },
+        data: {
+          password: passwordHash,
+          tokenVersion: { increment: 1 },
+        },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          role: true,
+          tokenVersion: true,
+        },
+      });
+      await invalidateResetTokens(admin.userId, tx);
+      return updated;
     });
 
     await createAuditLog({

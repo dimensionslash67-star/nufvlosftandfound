@@ -56,9 +56,17 @@ function toFieldErrors(error: z.ZodError<LegacyAddItemInput>) {
 }
 
 export async function submitLegacyAddItem(
-  reporterId: string | null,
   input: LegacyAddItemInput,
 ): Promise<LegacyAddItemResult> {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    return {
+      success: false,
+      message: 'Unauthorized.',
+    };
+  }
+
   const parsed = legacyAddItemSchema.safeParse(input);
 
   if (!parsed.success) {
@@ -66,24 +74,6 @@ export async function submitLegacyAddItem(
       success: false,
       message: 'Validation failed.',
       fieldErrors: toFieldErrors(parsed.error),
-    };
-  }
-
-  const currentUser = await getCurrentUser();
-  const reporter = reporterId
-    ? await prisma.user.findUnique({
-        where: { id: reporterId },
-        select: {
-          id: true,
-          isActive: true,
-        },
-      })
-    : currentUser;
-
-  if (!reporter?.isActive) {
-    return {
-      success: false,
-      message: 'Unauthorized.',
     };
   }
 
@@ -119,12 +109,12 @@ export async function submitLegacyAddItem(
           dueDate: addDays(parsed.data.dateReceived, retentionDays),
           contactInfo: contactDetails.join(' | '),
           imageUrl: '',
-          reporterId: reporter.id,
+          reporterId: currentUser.id,
         },
       });
 
       await createAuditLog({
-        userId: reporter.id,
+        userId: currentUser.id,
         action: 'ITEM_CREATED',
         entityType: 'ITEM',
         entityId: item.id,
